@@ -1,19 +1,19 @@
-"use client";
+'use client';
 
-import { useState, useEffect, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/hooks/use-auth";
-import { Spinner } from "@/components/ui";
-import { registerUser } from "./auth.api";
-import { getRegisterStep1, clearRegisterStep1 } from "./register-session";
-import { isAxiosError } from "axios";
+import { useState, useEffect, type FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/use-auth';
+import { Spinner } from '@/components/ui';
+import { registerUser } from './auth.api';
+import { getRegisterStep1, clearRegisterStep1 } from './register-session';
+import { isAxiosError } from 'axios';
 
 export function RegisterStep2Form() {
   const router = useRouter();
   const { login } = useAuth();
 
-  const [email, setEmail] = useState("");
-  const [username, setUsername] = useState("");
+  const [email] = useState(() => getRegisterStep1()?.email ?? '');
+  const [username, setUsername] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -21,16 +21,13 @@ export function RegisterStep2Form() {
   useEffect(() => {
     const step1 = getRegisterStep1();
     if (!step1) {
-      router.replace("/register");
-      return;
+      router.replace('/register');
     }
-    setEmail(step1.email);
   }, [router]);
 
   function validateUsername(value: string) {
     if (!value) return "Le nom d'utilisateur est requis.";
-    if (!/^[a-zA-Z0-9_]{3,20}$/.test(value))
-      return "3 à 20 caractères : lettres, chiffres ou _.";
+    if (!/^[a-zA-Z0-9_]{3,20}$/.test(value)) return '3 à 20 caractères : lettres, chiffres ou _.';
     return null;
   }
 
@@ -44,7 +41,7 @@ export function RegisterStep2Form() {
 
     const step1 = getRegisterStep1();
     if (!step1) {
-      router.replace("/register");
+      router.replace('/register');
       return;
     }
 
@@ -57,22 +54,20 @@ export function RegisterStep2Form() {
       });
       clearRegisterStep1();
       login(token, user);
-      router.push("/home");
+      router.push('/home');
     } catch (err) {
       if (isAxiosError(err) && err.response) {
-        const msg = err.response.data?.message ?? "Une erreur est survenue.";
+        const msg = err.response.data?.message ?? 'Une erreur est survenue.';
         setError(msg);
       } else {
-        setError("Une erreur est survenue. Réessaie plus tard.");
+        setError('Une erreur est survenue. Réessaie plus tard.');
       }
     } finally {
       setIsLoading(false);
     }
   }
 
-  const initials = username
-    ? username[0].toUpperCase()
-    : "?";
+  const initials = username ? username[0].toUpperCase() : '?';
 
   if (!email) {
     return (
@@ -86,21 +81,24 @@ export function RegisterStep2Form() {
     <form onSubmit={handleSubmit} className="flex flex-col" noValidate>
       {/* Email confirmé */}
       <div className="flex items-center gap-[8px] bg-surface rounded-[10px] px-[14px] py-[10px] mb-10">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B6B6B" strokeWidth="2.5" strokeLinecap="round">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#6B6B6B"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        >
           <polyline points="20 6 9 17 4 12" />
         </svg>
         <span className="text-[13px] text-sub">
-          Email confirmé —{" "}
-          <strong className="text-ink">{email}</strong>
+          Email confirmé — <strong className="text-ink">{email}</strong>
         </span>
       </div>
 
-      <h1 className="text-[28px] font-extrabold text-ink tracking-tight mb-2">
-        Dernière étape.
-      </h1>
-      <p className="text-[14px] text-sub mb-9">
-        Choisis comment tu t&apos;appelles sur Breezy.
-      </p>
+      <h1 className="text-[28px] font-extrabold text-ink tracking-tight mb-2">Dernière étape.</h1>
+      <p className="text-[14px] text-sub mb-9">Choisis comment tu t&apos;appelles sur Breezy.</p>
 
       {error && (
         <div className="mb-5 px-4 py-3 rounded-[10px] bg-red-50 border border-red-200 text-[13px] text-red-700">
@@ -125,11 +123,9 @@ export function RegisterStep2Form() {
           }}
           placeholder="alexmartin"
           className={[
-            "w-full h-[60px] border-2 rounded-[14px] pl-[38px] pr-[18px] text-[22px] font-bold text-ink bg-white placeholder:text-muted outline-none transition-colors tracking-[-0.5px]",
-            fieldError
-              ? "border-red-400 focus:border-red-400"
-              : "border-ink",
-          ].join(" ")}
+            'w-full h-[60px] border-2 rounded-[14px] pl-[38px] pr-[18px] text-[22px] font-bold text-ink bg-white placeholder:text-muted outline-none transition-colors tracking-[-0.5px]',
+            fieldError ? 'border-red-400 focus:border-red-400' : 'border-ink',
+          ].join(' ')}
         />
       </div>
 
@@ -139,7 +135,15 @@ export function RegisterStep2Form() {
           <p className="text-[13px] text-red-500">{fieldError}</p>
         ) : username && !fieldError ? (
           <>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" strokeWidth="2.5" strokeLinecap="round">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#0A0A0A"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+            >
               <polyline points="20 6 9 17 4 12" />
             </svg>
             <span className="text-[13px] text-sub">Disponible</span>
@@ -157,12 +161,8 @@ export function RegisterStep2Form() {
             {initials}
           </div>
           <div>
-            <p className="text-[15px] font-bold text-ink">
-              {username || "—"}
-            </p>
-            <p className="text-[13px] text-sub">
-              @{username || "—"}
-            </p>
+            <p className="text-[15px] font-bold text-ink">{username || '—'}</p>
+            <p className="text-[13px] text-sub">@{username || '—'}</p>
           </div>
         </div>
       </div>
