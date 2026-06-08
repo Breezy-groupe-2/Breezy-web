@@ -1,23 +1,23 @@
-import { http, HttpResponse, delay } from "msw";
-import { MOCK_ME, MOCK_POSTS, MOCK_USERS, MOCK_COMMENTS } from "./data";
-import type { Post } from "@/types";
+import { http, HttpResponse, delay } from 'msw';
+import { MOCK_ME, MOCK_POSTS, MOCK_USERS, MOCK_COMMENTS } from './data';
+import type { Post } from '@/types';
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
 let posts: Post[] = [...MOCK_POSTS];
-let likedPosts = new Set<number>([1]);
+const likedPosts = new Set<number>([1]);
 
 export const handlers = [
   // ── Auth ──────────────────────────────────────────────────────────────────
 
   http.post(`${BASE}/api/v1/auth/login`, async () => {
     await delay(400);
-    return HttpResponse.json({ token: "mock-jwt-token", user: MOCK_ME });
+    return HttpResponse.json({ token: 'mock-jwt-token', user: MOCK_ME });
   }),
 
   http.post(`${BASE}/api/v1/auth/register`, async () => {
     await delay(500);
-    return HttpResponse.json({ token: "mock-jwt-token", user: MOCK_ME });
+    return HttpResponse.json({ token: 'mock-jwt-token', user: MOCK_ME });
   }),
 
   // ── Current user ──────────────────────────────────────────────────────────
@@ -87,9 +87,7 @@ export const handlers = [
     const id = Number(params.id);
     likedPosts.delete(id);
     posts = posts.map((p) =>
-      p.id === id
-        ? { ...p, isLiked: false, likesCount: Math.max(0, p.likesCount - 1) }
-        : p
+      p.id === id ? { ...p, isLiked: false, likesCount: Math.max(0, p.likesCount - 1) } : p
     );
     return new HttpResponse(null, { status: 204 });
   }),
@@ -123,9 +121,7 @@ export const handlers = [
 
   http.get(`${BASE}/api/v1/users/:username/posts`, async ({ params }) => {
     await delay(250);
-    const userPosts = posts.filter(
-      (p) => p.author.username === params.username
-    );
+    const userPosts = posts.filter((p) => p.author.username === params.username);
     return HttpResponse.json({
       data: userPosts,
       total: userPosts.length,
