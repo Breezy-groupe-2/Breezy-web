@@ -1,7 +1,8 @@
 "use client";
 
+import { useRef, useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { BreezyLogo, Avatar } from "@/components/ui";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -51,7 +52,26 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const router = useRouter();
+  const { user, logout } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onOutsideClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onOutsideClick);
+    return () => document.removeEventListener("mousedown", onOutsideClick);
+  }, []);
+
+  function handleLogout() {
+    logout();
+    setMenuOpen(false);
+    router.replace("/login");
+  }
 
   return (
     <aside className="hidden md:flex flex-col w-[240px] border-r border-line bg-white px-4 py-6 shrink-0 sticky top-0 h-screen">
@@ -94,26 +114,46 @@ export function Sidebar() {
         Poster
       </button>
 
-      {/* User card */}
-      <div className="mt-2 flex items-center gap-[10px] px-[10px] py-3 rounded-[10px] hover:bg-surface cursor-pointer transition-colors">
-        <Avatar
-          alt={user?.displayName ?? "A"}
-          src={user?.avatarUrl}
-          size="sm"
-        />
-        <div className="flex-1 min-w-0">
-          <p className="text-[14px] font-bold text-ink truncate">
-            {user?.displayName ?? "Alex Martin"}
-          </p>
-          <p className="text-[12px] text-sub truncate">
-            @{user?.username ?? "alexmartin"}
-          </p>
-        </div>
-        <svg viewBox="0 0 24 24" className="size-4 text-sub shrink-0" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="12" cy="12" r="1" fill="currentColor" />
-          <circle cx="19" cy="12" r="1" fill="currentColor" />
-          <circle cx="5" cy="12" r="1" fill="currentColor" />
-        </svg>
+      {/* User card + logout menu */}
+      <div className="relative mt-2" ref={menuRef}>
+        {menuOpen && (
+          <div className="absolute bottom-full left-0 mb-2 w-full bg-white border border-line rounded-[14px] shadow-[0_4px_20px_rgba(0,0,0,0.1)] overflow-hidden">
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-3 w-full px-4 py-3 text-[14px] font-semibold text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+            >
+              <svg viewBox="0 0 24 24" className="size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+              Déconnexion
+            </button>
+          </div>
+        )}
+        <button
+          onClick={() => setMenuOpen((o) => !o)}
+          className="w-full flex items-center gap-[10px] px-[10px] py-3 rounded-[10px] hover:bg-surface cursor-pointer transition-colors"
+        >
+          <Avatar
+            alt={user?.displayName ?? "A"}
+            src={user?.avatarUrl}
+            size="sm"
+          />
+          <div className="flex-1 min-w-0 text-left">
+            <p className="text-[14px] font-bold text-ink truncate">
+              {user?.displayName ?? "Alex Martin"}
+            </p>
+            <p className="text-[12px] text-sub truncate">
+              @{user?.username ?? "alexmartin"}
+            </p>
+          </div>
+          <svg viewBox="0 0 24 24" className="size-4 text-sub shrink-0" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="1" fill="currentColor" />
+            <circle cx="19" cy="12" r="1" fill="currentColor" />
+            <circle cx="5" cy="12" r="1" fill="currentColor" />
+          </svg>
+        </button>
       </div>
     </aside>
   );
