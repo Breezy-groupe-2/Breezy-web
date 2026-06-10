@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Avatar, Icon, LikeButton } from "@/components/ui";
 import { CommentItem } from "@/features/comments/CommentItem";
-import { getPost, likePost, unlikePost } from "@/features/posts/posts.api";
+import { getPost, likePost, unlikePost, deletePost, updatePost } from "@/features/posts/posts.api";
 import { getComments, addComment } from "@/features/comments/comments.api";
 import { useAuth } from "@/hooks/use-auth";
 import { formatRelative } from "@/lib/time";
@@ -21,7 +21,24 @@ export default function PostDetailPage() {
   const [loading, setLoading] = useState(true);
   const [commentText, setCommentText] = useState("");
   const [sending, setSending] = useState(false);
+  const [postMenuOpen, setPostMenuOpen] = useState(false);
+  const [editingPost, setEditingPost] = useState(false);
+  const [editPostText, setEditPostText] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const postMenuRef = useRef<HTMLDivElement>(null);
+
+  const isOwn = post?.author.username === me?.username;
+
+  useEffect(() => {
+    if (!postMenuOpen) return;
+    function onOutside(e: MouseEvent) {
+      if (postMenuRef.current && !postMenuRef.current.contains(e.target as Node)) {
+        setPostMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onOutside);
+    return () => document.removeEventListener("mousedown", onOutside);
+  }, [postMenuOpen]);
 
   useEffect(() => {
     if (!id) return;
@@ -57,6 +74,19 @@ export default function PostDetailPage() {
     } finally {
       setSending(false);
     }
+  }
+
+  async function handleDeletePost() {
+    if (!post) return;
+    await deletePost(post.id);
+    router.back();
+  }
+
+  async function savePostEdit() {
+    if (!post || !editPostText.trim()) return;
+    const updated = await updatePost(post.id, editPostText.trim());
+    setPost(updated);
+    setEditingPost(false);
   }
 
   function handleLikeComment(commentId: number) {
@@ -110,28 +140,96 @@ export default function PostDetailPage() {
       <div className="flex-1 overflow-y-auto scrollbar-hide pb-[100px]">
         <div className="px-5 py-3">
           {/* Post header */}
-          <Link href={`/profile/${author.username}`} className="flex items-center gap-3 cursor-pointer">
-            <Avatar displayName={author.displayName} src={author.avatarUrl} size={48} />
-            <div>
-              <p className="font-display font-bold text-[16px]" style={{ color: "var(--text)" }}>
-                {author.displayName}
-              </p>
-              <p className="text-[13.5px]" style={{ color: "var(--text-faint)" }}>
-                @{author.username}
-              </p>
+          <div className="flex items-center gap-3">
+            <Link href={`/profile/${author.username}`} className="flex items-center gap-3 flex-1 min-w-0">
+              <Avatar displayName={author.displayName} src={author.avatarUrl} size={48} />
+              <div>
+                <p className="font-display font-bold text-[16px]" style={{ color: "var(--text)" }}>
+                  {author.displayName}
+                </p>
+                <p className="text-[13.5px]" style={{ color: "var(--text-faint)" }}>
+                  @{author.username}
+                </p>
+              </div>
+            </Link>
+            <div className="relative" ref={postMenuRef}>
+              <button
+                onClick={() => isOwn && setPostMenuOpen((o) => !o)}
+                className="w-9 h-9 flex items-center justify-center rounded-full"
+              >
+                <Icon name="more" size={20} color="var(--text-faint)" />
+              </button>
+              {isOwn && postMenuOpen && (
+                <div
+                  className="absolute right-0 top-10 w-[170px] rounded-[14px] border overflow-hidden z-20"
+                  style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 4px 20px rgba(0,0,0,0.12)" }}
+                >
+                  <button
+                    onClick={() => { setEditPostText(post.content); setEditingPost(true); setPostMenuOpen(false); }}
+                    className="flex items-center gap-3 w-full px-4 py-3 text-[14px] font-semibold transition-colors"
+                    style={{ color: "var(--text)" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface-2)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <Icon name="edit" size={15} color="var(--text)" />
+                    Modifier
+                  </button>
+                  <div className="border-t" style={{ borderColor: "var(--border)" }} />
+                  <button
+                    onClick={handleDeletePost}
+                    className="flex items-center gap-3 w-full px-4 py-3 text-[14px] font-semibold text-red-500 hover:bg-red-50 transition-colors"
+                  >
+                    <Icon name="trash" size={15} color="currentColor" />
+                    Supprimer
+                  </button>
+                </div>
+              )}
             </div>
-            <div className="ml-auto">
-              <Icon name="more" size={20} color="var(--text-faint)" />
-            </div>
-          </Link>
+          </div>
 
           {/* Post body */}
-          <p
-            className="text-[19px] leading-relaxed mt-4 mb-3 whitespace-pre-wrap"
-            style={{ color: "var(--text)", textWrap: "pretty" } as React.CSSProperties}
-          >
-            {post.content}
-          </p>
+          {editingPost ? (
+            <div className="mt-4 mb-3">
+              <textarea
+                autoFocus
+                value={editPostText}
+                onChange={(e) => setEditPostText(e.target.value)}
+                maxLength={280}
+                rows={4}
+                className="w-full bg-transparent border-none outline-none resize-none text-[19px] leading-relaxed font-sans"
+                style={{ color: "var(--text)" }}
+              />
+              <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: "var(--border)" }}>
+                <span className="text-[12px] font-semibold" style={{ color: "var(--text-faint)" }}>
+                  {280 - editPostText.length}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setEditingPost(false)}
+                    className="h-8 px-3 rounded-full text-[13px] font-bold border"
+                    style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={savePostEdit}
+                    disabled={!editPostText.trim() || editPostText.length > 280}
+                    className="h-8 px-4 rounded-full text-[13px] font-bold disabled:opacity-50"
+                    style={{ background: "var(--primary)", color: "var(--on-primary)" }}
+                  >
+                    OK
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p
+              className="text-[19px] leading-relaxed mt-4 mb-3 whitespace-pre-wrap"
+              style={{ color: "var(--text)", textWrap: "pretty" } as React.CSSProperties}
+            >
+              {post.content}
+            </p>
+          )}
 
           {/* Timestamp */}
           <p

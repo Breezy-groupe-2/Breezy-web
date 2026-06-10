@@ -5,7 +5,7 @@ import { BreezyLogo, Icon, Avatar } from "@/components/ui";
 import { PostCard } from "@/features/posts/PostCard";
 import { FeedSwitch } from "@/features/feed/FeedSwitch";
 import { getFeed } from "@/features/feed/feed.api";
-import { createPost, likePost, unlikePost } from "@/features/posts/posts.api";
+import { createPost, likePost, unlikePost, deletePost } from "@/features/posts/posts.api";
 import { useCompose } from "@/store/compose-context";
 import { useTheme } from "@/store/theme-context";
 import { useAuth } from "@/hooks/use-auth";
@@ -78,6 +78,25 @@ export default function HomePage() {
         )
       );
     (wasLiked ? unlikePost : likePost)(id).catch(rollback);
+  }
+
+  function handleDelete(id: number) {
+    const snapshot = posts.find((p) => p.id === id);
+    const snapshotIdx = posts.findIndex((p) => p.id === id);
+    setPosts((prev) => prev.filter((p) => p.id !== id));
+    deletePost(id).catch(() => {
+      if (snapshot) {
+        setPosts((prev) => {
+          const next = [...prev];
+          next.splice(snapshotIdx, 0, snapshot);
+          return next;
+        });
+      }
+    });
+  }
+
+  function handleUpdate(id: number, newContent: string) {
+    setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, content: newContent } : p)));
   }
 
   async function handleDesktopPost() {
@@ -187,7 +206,14 @@ export default function HomePage() {
       ) : (
         <div className="flex flex-col gap-3 p-3.5 pb-[120px] md:pb-8">
           {displayedPosts.map((post) => (
-            <PostCard key={post.id} post={post} onLike={handleLike} />
+            <PostCard
+                key={post.id}
+                post={post}
+                isOwn={post.author.username === user?.username}
+                onLike={handleLike}
+                onDelete={handleDelete}
+                onUpdate={handleUpdate}
+              />
           ))}
           <div
             className="flex items-center justify-center gap-2 py-3 text-[13px]"

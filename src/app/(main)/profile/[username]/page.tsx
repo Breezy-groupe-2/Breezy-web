@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Avatar, Icon } from "@/components/ui";
 import { PostCard } from "@/features/posts/PostCard";
 import { getProfile, updateProfile } from "@/features/profile/profile.api";
-import { getUserPosts, likePost, unlikePost } from "@/features/posts/posts.api";
+import { getUserPosts, likePost, unlikePost, deletePost } from "@/features/posts/posts.api";
 import { followUser, unfollowUser } from "@/features/users/users.api";
 import { useAuth } from "@/hooks/use-auth";
 import type { User, Post } from "@/types";
@@ -81,6 +81,25 @@ export default function ProfilePage() {
         )
       );
     (wasLiked ? unlikePost : likePost)(id).catch(rollback);
+  }
+
+  function handleDelete(id: number) {
+    const snapshot = posts.find((p) => p.id === id);
+    const snapshotIdx = posts.findIndex((p) => p.id === id);
+    setPosts((prev) => prev.filter((p) => p.id !== id));
+    deletePost(id).catch(() => {
+      if (snapshot) {
+        setPosts((prev) => {
+          const next = [...prev];
+          next.splice(snapshotIdx, 0, snapshot);
+          return next;
+        });
+      }
+    });
+  }
+
+  function handleUpdate(id: number, newContent: string) {
+    setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, content: newContent } : p)));
   }
 
   async function saveProfile() {
@@ -253,7 +272,14 @@ export default function ProfilePage() {
       <div className="flex flex-col gap-3 p-3.5 mt-3 pb-[120px] md:pb-8">
         {tab === "posts" &&
           posts.map((post) => (
-            <PostCard key={post.id} post={post} onLike={handleLike} />
+            <PostCard
+                key={post.id}
+                post={post}
+                isOwn={isMe}
+                onLike={handleLike}
+                onDelete={handleDelete}
+                onUpdate={handleUpdate}
+              />
           ))}
         {tab !== "posts" && (
           <p
