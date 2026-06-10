@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { getToken, setToken, removeToken } from "@/lib/axios";
 import { getMe } from "@/features/auth/auth.api";
 import type { User } from "@/types";
@@ -26,16 +19,18 @@ interface AuthContextValue extends AuthState {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState>({
-    user: null,
-    token: null,
-    isLoading: true,
+  const [state, setState] = useState<AuthState>(() => {
+    const token = getToken();
+    return {
+      user: null,
+      token,
+      isLoading: Boolean(token),
+    };
   });
 
   useEffect(() => {
     const token = getToken();
     if (!token) {
-      setState({ user: null, token: null, isLoading: false });
       return;
     }
 
@@ -58,9 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout }}>
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={{ ...state, login, logout }}>{children}</AuthContext.Provider>
   );
 }
 

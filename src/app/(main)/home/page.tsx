@@ -1,172 +1,238 @@
-const MOCK_POSTS = [
-  {
-    id: 1,
-    author: { name: "Sophie Durand", handle: "sophied", initials: "S" },
-    body: "Enfin compris les closures en JS après des semaines ☀️ Parfois il suffit d'un bon café.",
-    time: "2m",
-    comments: 12,
-    reposts: 8,
-    likes: 47,
-    liked: true,
-  },
-  {
-    id: 2,
-    author: { name: "Marc Lefèvre", handle: "marcl", initials: "M" },
-    body: "Vue du bureau ce matin. Ça donne envie de bosser 🌅",
-    time: "18m",
-    comments: 5,
-    reposts: 3,
-    likes: 21,
-    liked: false,
-  },
-  {
-    id: 3,
-    author: { name: "Lena Kim", handle: "lenak", initials: "L" },
-    body: "Les petits projets sont aussi valables que les gros. Lance-toi.",
-    time: "1h",
-    comments: 32,
-    reposts: 19,
-    likes: 84,
-    liked: false,
-  },
-  {
-    id: 4,
-    author: { name: "Alex Martin", handle: "alexmartin", initials: "A" },
-    body: "Docker compose pour le dev local, c'est tellement plus propre que d'installer tout à la main. Essayez.",
-    time: "3h",
-    comments: 8,
-    reposts: 11,
-    likes: 33,
-    liked: false,
-  },
-];
+"use client";
 
-function PostCard({
-  author,
-  body,
-  time,
-  comments,
-  reposts,
-  likes,
-  liked,
-}: (typeof MOCK_POSTS)[0]) {
-  return (
-    <article className="bg-white rounded-2xl mx-3 mt-3 p-5 cursor-pointer hover:shadow-[0_2px_12px_rgba(0,0,0,0.07)] transition-shadow">
-      <div className="flex gap-3">
-        {/* Avatar — squircle pour se distinguer de Twitter */}
-        <div className="size-[44px] rounded-[12px] bg-ink flex items-center justify-center text-white text-[14px] font-bold shrink-0">
-          {author.initials}
-        </div>
+import { useState, useEffect, useCallback } from "react";
+import { BreezyLogo, Icon, Avatar } from "@/components/ui";
+import { PostCard } from "@/features/posts/PostCard";
+import { FeedSwitch } from "@/features/feed/FeedSwitch";
+import { getFeed } from "@/features/feed/feed.api";
+import { createPost, likePost, unlikePost } from "@/features/posts/posts.api";
+import { useCompose } from "@/store/compose-context";
+import { useTheme } from "@/store/theme-context";
+import { useAuth } from "@/hooks/use-auth";
+import type { Post } from "@/types";
 
-        <div className="flex-1 min-w-0">
-          {/* Meta */}
-          <div className="flex items-center gap-2 mb-[6px] flex-wrap">
-            <span className="text-[15px] font-bold text-ink leading-none">{author.name}</span>
-            <span className="text-[13px] text-sub">@{author.handle}</span>
-            <span className="text-[12px] text-muted ml-auto">{time}</span>
-          </div>
-
-          {/* Corps */}
-          <p className="text-[15px] text-ink leading-relaxed mb-4">{body}</p>
-
-          {/* Actions */}
-          <div className="flex items-center -mx-2">
-            <button className="flex items-center gap-2 text-[13px] text-sub flex-1 px-2 py-1.5 rounded-xl hover:bg-surface transition-colors cursor-pointer">
-              <svg viewBox="0 0 24 24" className="size-[16px] shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
-              {comments}
-            </button>
-
-            <button className="flex items-center gap-2 text-[13px] text-sub flex-1 px-2 py-1.5 rounded-xl hover:bg-surface transition-colors cursor-pointer">
-              <svg viewBox="0 0 24 24" className="size-[16px] shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M17 1l4 4-4 4" />
-                <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-                <path d="M7 23l-4-4 4-4" />
-                <path d="M21 13v2a4 4 0 0 1-4 4H3" />
-              </svg>
-              {reposts}
-            </button>
-
-            <button
-              className={[
-                "flex items-center gap-2 text-[13px] flex-1 px-2 py-1.5 rounded-xl hover:bg-surface transition-colors cursor-pointer",
-                liked ? "text-ink font-semibold" : "text-sub",
-              ].join(" ")}
-            >
-              <svg viewBox="0 0 24 24" className="size-[16px] shrink-0" fill={liked ? "#0A0A0A" : "none"} stroke={liked ? "#0A0A0A" : "currentColor"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-              </svg>
-              {likes}
-            </button>
-          </div>
-        </div>
-      </div>
-    </article>
-  );
-}
+type FeedTab = "mine" | "all";
 
 export default function HomePage() {
+  const { user } = useAuth();
+  const { toggleTheme, theme } = useTheme();
+  const { registerHandler } = useCompose();
+
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [feedTab, setFeedTab] = useState<FeedTab>("all");
+  const [following] = useState(new Set<string>());
+  const [composeText, setComposeText] = useState("");
+  const [posting, setPosting] = useState(false);
+
+  useEffect(() => {
+    getFeed()
+      .then(setPosts)
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handlePost = useCallback(
+    async (content: string) => {
+      const optimistic: Post = {
+        id: Date.now(),
+        content,
+        author: user!,
+        likesCount: 0,
+        commentsCount: 0,
+        isLiked: false,
+        createdAt: new Date().toISOString(),
+      };
+      setPosts((prev) => [optimistic, ...prev]);
+      try {
+        const created = await createPost(content);
+        setPosts((prev) => prev.map((p) => (p.id === optimistic.id ? created : p)));
+      } catch (err) {
+        setPosts((prev) => prev.filter((p) => p.id !== optimistic.id));
+        throw err;
+      }
+    },
+    [user]
+  );
+
+  useEffect(() => {
+    registerHandler(handlePost);
+  }, [registerHandler, handlePost]);
+
+  function handleLike(id: number) {
+    let wasLiked = false;
+    setPosts((prev) =>
+      prev.map((p) => {
+        if (p.id === id) {
+          wasLiked = p.isLiked;
+          return { ...p, isLiked: !p.isLiked, likesCount: p.isLiked ? p.likesCount - 1 : p.likesCount + 1 };
+        }
+        return p;
+      })
+    );
+    const rollback = () =>
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === id
+            ? { ...p, isLiked: wasLiked, likesCount: wasLiked ? p.likesCount + 1 : p.likesCount - 1 }
+            : p
+        )
+      );
+    (wasLiked ? unlikePost : likePost)(id).catch(rollback);
+  }
+
+  async function handleDesktopPost() {
+    if (!composeText.trim() || posting) return;
+    setPosting(true);
+    await handlePost(composeText.trim());
+    setComposeText("");
+    setPosting(false);
+  }
+
+  const displayedPosts =
+    feedTab === "all"
+      ? posts
+      : posts.filter(
+          (p) =>
+            p.author.username === user?.username ||
+            following.has(p.author.username)
+        );
+
   return (
-    <>
-      {/* Desktop feed header */}
-      <div className="hidden md:flex sticky top-0 z-10 h-[52px] items-center px-5 bg-canvas/90 backdrop-blur-sm border-b border-line">
-        <h1 className="text-[17px] font-extrabold text-ink tracking-tight">Pour toi</h1>
+    <div className="flex flex-col min-h-svh scrollbar-hide overflow-y-auto">
+      {/* Sticky header */}
+      <div
+        className="sticky top-0 z-30 pt-[54px] md:pt-0"
+        style={{
+          background: "color-mix(in oklch, var(--bg) 82%, transparent)",
+          backdropFilter: "blur(14px)",
+          WebkitBackdropFilter: "blur(14px)",
+        }}
+      >
+        {/* Mobile only: logo row */}
+        <div className="md:hidden flex items-center px-4 pt-2 pb-1">
+          <BreezyLogo size={21} />
+        </div>
+
+        {/* FeedSwitch + toggle aligned */}
+        <div className="flex items-center px-4 pb-2 pt-2 md:pt-2 gap-2">
+          <div className="flex-1">
+            <FeedSwitch value={feedTab} onChange={setFeedTab} />
+          </div>
+          <button
+            onClick={toggleTheme}
+            className="w-[38px] h-[38px] flex items-center justify-center rounded-full shrink-0"
+            style={{ background: "var(--surface)", boxShadow: "var(--card-shadow)" }}
+          >
+            <Icon name={theme === "dark" ? "sun" : "moon"} size={18} color="var(--text)" />
+          </button>
+        </div>
       </div>
 
-      {/* Composer */}
-      <div className="mx-3 mt-3 bg-white rounded-2xl px-5 py-4">
-        <div className="flex gap-3">
-          <div className="size-[44px] rounded-[12px] bg-ink flex items-center justify-center text-white text-[14px] font-bold shrink-0">
-            A
-          </div>
-          <div className="flex-1">
-            <p className="text-[16px] text-muted min-h-[44px] pt-[2px] mb-3">
-              Quoi de nouveau ?
-            </p>
-            <div className="flex items-center justify-between border-t border-line pt-3">
-              <div className="flex gap-1">
-                <button className="size-[34px] rounded-[8px] flex items-center justify-center hover:bg-surface transition-colors cursor-pointer">
-                  <svg viewBox="0 0 24 24" className="size-[18px]" fill="none" stroke="#6B6B6B" strokeWidth="1.8" strokeLinecap="round">
-                    <rect x="3" y="3" width="18" height="18" rx="2" />
-                    <circle cx="9" cy="9" r="2" />
-                    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
-                  </svg>
+      {/* Desktop inline composer */}
+      <div
+        className="hidden md:flex gap-3 px-5 py-4 border-b"
+        style={{ borderColor: "var(--border)" }}
+      >
+        {user && <Avatar displayName={user.displayName} src={user.avatarUrl} size={44} />}
+        <div className="flex-1">
+          <textarea
+            value={composeText}
+            onChange={(e) => setComposeText(e.target.value)}
+            placeholder="Quoi de neuf dans ta brise ?"
+            rows={2}
+            className="w-full bg-transparent border-none outline-none resize-none text-[18px] leading-relaxed font-sans"
+            style={{ color: "var(--text)" }}
+          />
+          <div
+            className="flex items-center justify-between pt-3"
+            style={{ borderTop: "1px solid var(--border)" }}
+          >
+            <div className="flex gap-1">
+              {(["image", "gust"] as const).map((n) => (
+                <button
+                  key={n}
+                  className="w-9 h-9 flex items-center justify-center rounded-full"
+                  style={{ color: "var(--primary)" }}
+                >
+                  <Icon name={n} size={20} />
                 </button>
-                <button className="size-[34px] rounded-[8px] flex items-center justify-center hover:bg-surface transition-colors cursor-pointer">
-                  <svg viewBox="0 0 24 24" className="size-[18px]" fill="none" stroke="#6B6B6B" strokeWidth="1.8" strokeLinecap="round">
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M8 14s1.5 2 4 2 4-2 4-2" />
-                    <line x1="9" y1="9" x2="9.01" y2="9" />
-                    <line x1="15" y1="9" x2="15.01" y2="9" />
-                  </svg>
-                </button>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-[12px] font-semibold text-muted">280</span>
-                <button className="bg-ink text-white rounded-full px-5 py-[7px] text-[14px] font-bold hover:bg-black/90 transition-colors cursor-pointer">
-                  Poster
-                </button>
-              </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-[12px] font-semibold" style={{ color: "var(--text-faint)" }}>
+                {280 - composeText.length}
+              </span>
+              <button
+                onClick={handleDesktopPost}
+                disabled={!composeText.trim() || composeText.length > 280 || posting}
+                className="h-9 px-5 rounded-full text-[14px] font-bold disabled:opacity-50"
+                style={{ background: "var(--primary)", color: "var(--on-primary)" }}
+              >
+                Poster
+              </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* FAB — mobile */}
-      <button className="fixed bottom-[74px] right-[18px] z-30 size-12 bg-ink rounded-full flex items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.25)] hover:bg-black/90 transition-colors cursor-pointer md:hidden">
-        <svg viewBox="0 0 24 24" className="size-[22px]" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
-          <line x1="12" y1="5" x2="12" y2="19" />
-          <line x1="5" y1="12" x2="19" y2="12" />
-        </svg>
-      </button>
-
       {/* Feed */}
-      <div className="pb-4">
-        {MOCK_POSTS.map((post) => (
-          <PostCard key={post.id} {...post} />
-        ))}
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <span
+            className="w-8 h-8 rounded-full border-[3px] border-primary border-t-transparent animate-spin block"
+          />
+        </div>
+      ) : displayedPosts.length === 0 ? (
+        <EmptyFeed onDiscover={() => setFeedTab("all")} />
+      ) : (
+        <div className="flex flex-col gap-3 p-3.5 pb-[120px] md:pb-8">
+          {displayedPosts.map((post) => (
+            <PostCard key={post.id} post={post} onLike={handleLike} />
+          ))}
+          <div
+            className="flex items-center justify-center gap-2 py-3 text-[13px]"
+            style={{ color: "var(--text-faint)" }}
+          >
+            <Icon name="gust" size={16} color="var(--text-faint)" />
+            tu es à jour
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EmptyFeed({ onDiscover }: { onDiscover: () => void }) {
+  return (
+    <div className="flex flex-col items-center gap-4 px-9 py-16 text-center">
+      <div
+        className="w-[88px] h-[88px] flex items-center justify-center"
+        style={{
+          borderRadius: 30,
+          background: "var(--primary-soft)",
+          animation: "b-sway 4s ease-in-out infinite",
+        }}
+      >
+        <Icon name="gust" size={42} color="var(--primary)" stroke={1.8} />
       </div>
-    </>
+      <div>
+        <p
+          className="font-display font-extrabold text-[21px]"
+          style={{ color: "var(--text)" }}
+        >
+          Ton feed est tout neuf
+        </p>
+        <p className="text-[15px] leading-relaxed mt-2 max-w-[260px]" style={{ color: "var(--text-muted)" }}>
+          Suis quelques personnes et leurs posts apparaîtront ici.
+        </p>
+      </div>
+      <button
+        onClick={onDiscover}
+        className="h-9 px-5 rounded-full text-[14px] font-bold"
+        style={{ background: "var(--primary)", color: "var(--on-primary)" }}
+      >
+        Voir le feed général
+      </button>
+    </div>
   );
 }
