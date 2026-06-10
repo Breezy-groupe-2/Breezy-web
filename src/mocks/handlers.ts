@@ -29,7 +29,7 @@ export const handlers = [
 
   http.get(`${BASE}/api/v1/users/:username`, async ({ params }) => {
     await delay(200);
-    const user = MOCK_USERS.find((u) => u.username === params.username);
+    const user = [...MOCK_USERS, MOCK_ME].find((u) => u.username === params.username);
     if (!user) return new HttpResponse(null, { status: 404 });
     return HttpResponse.json(user);
   }),
@@ -141,6 +141,24 @@ export const handlers = [
   http.delete(`${BASE}/api/v1/users/:username/follow`, async () => {
     await delay(200);
     return new HttpResponse(null, { status: 204 });
+  }),
+
+  // ── Followers / Following ─────────────────────────────────────────────────
+
+  http.get(`${BASE}/api/v1/users/:username/followers`, async ({ params }) => {
+    await delay(200);
+    const user = [...MOCK_USERS, MOCK_ME].find((u) => u.username === params.username);
+    const count = user?.followersCount ?? 0;
+    const list = MOCK_USERS.slice(0, Math.min(count, MOCK_USERS.length));
+    return HttpResponse.json({ data: list, total: list.length, page: 1, limit: 20, hasMore: false });
+  }),
+
+  http.get(`${BASE}/api/v1/users/:username/following`, async ({ params }) => {
+    await delay(200);
+    const user = [...MOCK_USERS, MOCK_ME].find((u) => u.username === params.username);
+    const count = user?.followingCount ?? 0;
+    const list = MOCK_USERS.slice(0, Math.min(count, MOCK_USERS.length));
+    return HttpResponse.json({ data: list, total: list.length, page: 1, limit: 20, hasMore: false });
   }),
 
   // ── User posts ────────────────────────────────────────────────────────────
