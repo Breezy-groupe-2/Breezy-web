@@ -1,23 +1,23 @@
-import { http, HttpResponse, delay } from 'msw';
-import { MOCK_ME, MOCK_POSTS, MOCK_USERS, MOCK_COMMENTS } from './data';
-import type { Post } from '@/types';
+import { http, HttpResponse, delay } from "msw";
+import { MOCK_ME, MOCK_POSTS, MOCK_USERS, MOCK_COMMENTS } from "./data";
+import type { Post, Comment } from "@/types";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
 let posts: Post[] = [...MOCK_POSTS];
-const likedPosts = new Set<number>([1]);
+let comments: Comment[] = [...MOCK_COMMENTS];
 
 export const handlers = [
   // ── Auth ──────────────────────────────────────────────────────────────────
 
   http.post(`${BASE}/api/v1/auth/login`, async () => {
     await delay(400);
-    return HttpResponse.json({ token: 'mock-jwt-token', user: MOCK_ME });
+    return HttpResponse.json({ token: "mock-jwt-token", user: MOCK_ME });
   }),
 
   http.post(`${BASE}/api/v1/auth/register`, async () => {
     await delay(500);
-    return HttpResponse.json({ token: 'mock-jwt-token', user: MOCK_ME });
+    return HttpResponse.json({ token: "mock-jwt-token", user: MOCK_ME });
   }),
 
   // ── Current user ──────────────────────────────────────────────────────────
@@ -75,7 +75,6 @@ export const handlers = [
   http.post(`${BASE}/api/v1/posts/:id/likes`, async ({ params }) => {
     await delay(150);
     const id = Number(params.id);
-    likedPosts.add(id);
     posts = posts.map((p) =>
       p.id === id ? { ...p, isLiked: true, likesCount: p.likesCount + 1 } : p
     );
@@ -85,7 +84,6 @@ export const handlers = [
   http.delete(`${BASE}/api/v1/posts/:id/likes`, async ({ params }) => {
     await delay(150);
     const id = Number(params.id);
-    likedPosts.delete(id);
     posts = posts.map((p) =>
       p.id === id ? { ...p, isLiked: false, likesCount: Math.max(0, p.likesCount - 1) } : p
     );
@@ -94,15 +92,43 @@ export const handlers = [
 
   // ── Comments ──────────────────────────────────────────────────────────────
 
-  http.get(`${BASE}/api/v1/posts/:id/comments`, async () => {
+  http.get(`${BASE}/api/v1/posts/:id/comments`, async ({ params }) => {
     await delay(250);
+    const postComments = comments.filter((c) => c.postId === Number(params.id) && !c.parentId);
     return HttpResponse.json({
-      data: MOCK_COMMENTS,
-      total: MOCK_COMMENTS.length,
+      data: postComments,
+      total: postComments.length,
       page: 1,
       limit: 20,
       hasMore: false,
     });
+  }),
+
+  http.post(`${BASE}/api/v1/posts/:id/comments`, async ({ request, params }) => {
+    await delay(300);
+    const body = (await request.json()) as { content: string };
+    const newComment: Comment = {
+      id: Date.now(),
+      content: body.content,
+      author: MOCK_ME,
+      postId: Number(params.id),
+      likesCount: 0,
+      isLiked: false,
+      createdAt: new Date().toISOString(),
+    };
+    comments = [newComment, ...comments];
+    posts = posts.map((p) =>
+      p.id === newComment.postId ? { ...p, commentsCount: p.commentsCount + 1 } : p
+    );
+    return HttpResponse.json(newComment, { status: 201 });
+  }),
+
+  // ── Profile edit ──────────────────────────────────────────────────────────
+
+  http.patch(`${BASE}/api/v1/users/me`, async ({ request }) => {
+    await delay(300);
+    const body = (await request.json()) as Partial<typeof MOCK_ME>;
+    return HttpResponse.json({ ...MOCK_ME, ...body });
   }),
 
   // ── Follow ────────────────────────────────────────────────────────────────

@@ -51,7 +51,7 @@ export function LoginForm() {
     <form onSubmit={handleSubmit} className="flex flex-col" noValidate>
       {/* Logo — mobile only */}
       <div className="md:hidden mb-10">
-        <BreezyLogo iconSize={36} textSize="text-[20px]" />
+        <BreezyLogo size={36} />
       </div>
 
       <h1 className="text-[26px] font-extrabold text-ink tracking-tight mb-1">

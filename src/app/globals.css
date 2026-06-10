@@ -1,29 +1,117 @@
 @import "tailwindcss";
 
-@theme {
-  /* Backgrounds */
-  --color-canvas:  #FAFAFA;
-  --color-surface: #F2F2F2;
-
-  /* Ink */
-  --color-ink:   #0A0A0A;
-  --color-sub:   #6B6B6B;
-  --color-muted: #ADADAD;
-
-  /* Borders */
-  --color-line:        #E8E8E8;
-  --color-line-strong: #D4D4D4;
-
-  /* Semantic aliases */
-  --color-white: #FFFFFF;
-  --color-black: #0A0A0A;
-
-  /* Typography */
-  --font-sans: var(--font-inter);
+/* ===== Breezy CSS variables ===== */
+:root {
+  --bg:            oklch(0.972 0.014 152);
+  --bg-top:        oklch(0.962 0.026 152);
+  --surface:       oklch(0.995 0.004 152);
+  --surface-2:     oklch(0.955 0.014 152);
+  --text:          oklch(0.31 0.035 152);
+  --text-muted:    oklch(0.56 0.028 152);
+  --text-faint:    oklch(0.68 0.022 152);
+  --border:        oklch(0.905 0.014 152);
+  --primary:       oklch(0.605 0.135 152);
+  --primary-press: oklch(0.55 0.14 152);
+  --on-primary:    oklch(0.99 0.01 152);
+  --primary-soft:  oklch(0.93 0.045 152);
+  --like:          oklch(0.64 0.17 25);
+  --like-soft:     oklch(0.93 0.05 25);
+  --card-shadow:   0 1px 2px rgba(60,55,110,0.05), 0 8px 22px -8px rgba(60,55,110,0.16);
+  --dock-shadow:   0 6px 16px -4px rgba(50,45,100,0.22), 0 2px 6px rgba(50,45,100,0.10);
+  --r-card: 26px;
+  --r-avatar: 34%;
+  --r-pill: 999px;
 }
+
+:root[data-theme="dark"] {
+  --bg:            oklch(0.225 0.022 152);
+  --bg-top:        oklch(0.255 0.03 152);
+  --surface:       oklch(0.275 0.026 152);
+  --surface-2:     oklch(0.32 0.03 152);
+  --text:          oklch(0.95 0.014 152);
+  --text-muted:    oklch(0.72 0.025 152);
+  --text-faint:    oklch(0.6 0.025 152);
+  --border:        oklch(0.36 0.025 152);
+  --primary:       oklch(0.74 0.125 152);
+  --primary-press: oklch(0.7 0.13 152);
+  --on-primary:    oklch(0.21 0.04 152);
+  --primary-soft:  oklch(0.38 0.06 152);
+  --like:          oklch(0.74 0.15 25);
+  --like-soft:     oklch(0.38 0.07 25);
+  --card-shadow:   0 1px 2px rgba(0,0,0,0.3), 0 10px 26px -10px rgba(0,0,0,0.5);
+  --dock-shadow:   0 8px 22px -4px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.35);
+}
+
+/* ===== Tailwind theme tokens ===== */
+@theme {
+  --font-display: var(--font-bricolage);
+  --font-body:    var(--font-jakarta);
+  --font-sans:    var(--font-jakarta);
+
+  --color-bg:           var(--bg);
+  --color-surface:      var(--surface);
+  --color-surface-2:    var(--surface-2);
+  --color-text:         var(--text);
+  --color-text-muted:   var(--text-muted);
+  --color-text-faint:   var(--text-faint);
+  --color-border:       var(--border);
+  --color-primary:      var(--primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-on-primary:   var(--on-primary);
+  --color-like:         var(--like);
+  --color-like-soft:    var(--like-soft);
+}
+
+/* ===== Animations ===== */
+@keyframes b-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes b-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+@keyframes b-drift {
+  to {
+    transform: translate(var(--dx, 0px), var(--dy, -20px)) scale(0.2);
+    opacity: 0;
+  }
+}
+@keyframes b-sheet-in {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes b-sway {
+  0%, 100% { transform: translateY(0) rotate(-1.5deg); }
+  50%      { transform: translateY(-5px) rotate(1.5deg); }
+}
+@keyframes b-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ===== Base ===== */
+*, *::before, *::after { box-sizing: border-box; }
 
 body {
-  background-color: #FAFAFA;
-  color: #0A0A0A;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.4s ease, color 0.3s ease;
+  min-height: 100svh;
 }
+
+.scrollbar-hide {
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.scrollbar-hide::-webkit-scrollbar { display: none; }

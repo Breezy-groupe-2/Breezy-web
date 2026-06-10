@@ -1,4 +1,3 @@
-export { BottomNav } from "./BottomNav";
-export { Sidebar } from "./Sidebar";
-export { TopBar } from "./TopBar";
 export { AuthGuard } from "./AuthGuard";
+export { Dock } from "./Dock";
+export { Sidebar } from "./Sidebar";

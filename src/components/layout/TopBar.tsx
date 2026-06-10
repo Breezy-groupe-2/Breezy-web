@@ -29,26 +29,33 @@ export function TopBar() {
   }
 
   return (
-    <header className="sticky top-0 z-30 h-[52px] bg-white border-b border-line flex items-center justify-between px-4 md:hidden">
+    <header
+      className="sticky top-0 z-30 h-[52px] flex items-center justify-between px-4 md:hidden border-b"
+      style={{ background: "var(--bg)", borderColor: "var(--border)" }}
+    >
       <Link href="/home">
-        <BreezyLogo iconSize={28} textSize="text-[17px]" />
+        <BreezyLogo size={20} />
       </Link>
 
       <div className="relative" ref={menuRef}>
         <button onClick={() => setMenuOpen((o) => !o)} className="cursor-pointer">
           <Avatar
-            alt={user?.displayName ?? "A"}
+            displayName={user?.displayName ?? ""}
             src={user?.avatarUrl}
-            size="sm"
+            size={32}
           />
         </button>
 
         {menuOpen && (
-          <div className="absolute top-full right-0 mt-2 w-[180px] bg-white border border-line rounded-[14px] shadow-[0_4px_20px_rgba(0,0,0,0.1)] overflow-hidden">
+          <div
+            className="absolute top-full right-0 mt-2 w-[180px] border rounded-[14px] shadow-[0_4px_20px_rgba(0,0,0,0.1)] overflow-hidden"
+            style={{ background: "var(--surface)", borderColor: "var(--border)" }}
+          >
             <Link
               href="/profile/me"
               onClick={() => setMenuOpen(false)}
-              className="flex items-center gap-3 px-4 py-3 text-[14px] font-medium text-ink hover:bg-surface transition-colors"
+              className="flex items-center gap-3 px-4 py-3 text-[14px] font-medium transition-colors"
+              style={{ color: "var(--text)" }}
             >
               <svg viewBox="0 0 24 24" className="size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
@@ -56,7 +63,7 @@ export function TopBar() {
               </svg>
               Mon profil
             </Link>
-            <div className="border-t border-line" />
+            <div className="border-t" style={{ borderColor: "var(--border)" }} />
             <button
               onClick={handleLogout}
               className="flex items-center gap-3 w-full px-4 py-3 text-[14px] font-semibold text-red-600 hover:bg-red-50 transition-colors cursor-pointer"

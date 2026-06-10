@@ -1,5 +1,5 @@
-import { LoginForm } from "@/features/auth/LoginForm";
+import { ConversationalAuth } from "@/features/auth/ConversationalAuth";
 
 export default function LoginPage() {
-  return <LoginForm />;
+  return <ConversationalAuth />;
 }

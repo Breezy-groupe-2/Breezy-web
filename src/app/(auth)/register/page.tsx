@@ -1,5 +1,5 @@
-import { RegisterStep1Form } from "@/features/auth/RegisterStep1Form";
+import { ConversationalAuth } from "@/features/auth/ConversationalAuth";
 
 export default function RegisterPage() {
-  return <RegisterStep1Form />;
+  return <ConversationalAuth initialMode="register" />;
 }

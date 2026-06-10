@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-import { getToken, setToken, removeToken } from '@/lib/axios';
-import { getMe } from '@/features/auth/auth.api';
-import type { User } from '@/types';
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { getToken, setToken, removeToken } from "@/lib/axios";
+import { getMe } from "@/features/auth/auth.api";
+import type { User } from "@/types";
 
 interface AuthState {
   user: User | null;
@@ -59,6 +59,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>');
+  if (!ctx) throw new Error("useAuth must be used inside <AuthProvider>");
   return ctx;
 }

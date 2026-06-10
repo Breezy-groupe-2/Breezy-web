@@ -1,68 +1,123 @@
 import type { ReactNode } from "react";
-import { Sidebar, BottomNav, TopBar, AuthGuard } from "@/components/layout";
+import { Sidebar, AuthGuard, Dock } from "@/components/layout";
+import { ComposeProvider } from "@/store/compose-context";
+import { ComposeSheet } from "@/features/feed/ComposeSheet";
+import { Avatar } from "@/components/ui";
+
+const SUGGESTIONS = [
+  { name: "Lina Khoury",   handle: "lina.k",   avatar: "https://i.pravatar.cc/150?img=45", followed: true  },
+  { name: "Sofia Nguyen",  handle: "sofia",     avatar: "https://i.pravatar.cc/150?img=49", followed: false },
+  { name: "Samuel Roy",    handle: "samuel",    avatar: "https://i.pravatar.cc/150?img=15", followed: false },
+  { name: "Hugo Petit",    handle: "hugo.bd",   avatar: "https://i.pravatar.cc/150?img=53", followed: false },
+  { name: "Noah Berger",   handle: "noahcode",  avatar: "https://i.pravatar.cc/150?img=12", followed: true  },
+];
+
+const TENDANCES = [
+  { category: "Design",  tag: "#interfacedouce", posts: "2 314" },
+  { category: "Photo",   tag: "#argentique",     posts: "1 042" },
+  { category: "Dev",     tag: "#vendreditech",   posts: "887"   },
+  { category: "Vie",     tag: "#cafédumatin",    posts: "5 120" },
+];
 
 export default function MainLayout({ children }: { children: ReactNode }) {
   return (
     <AuthGuard>
-    <div className="min-h-screen bg-canvas">
-      {/* Mobile top bar */}
-      <TopBar />
+      <ComposeProvider>
+        <div className="min-h-svh flex justify-center" style={{ background: "var(--bg)" }}>
+          <div className="flex w-full max-w-[1260px]">
+            {/* Desktop sidebar */}
+            <Sidebar />
 
-      <div className="flex justify-center">
-        <div className="flex w-full max-w-[1100px]">
-          {/* Desktop sidebar */}
-          <Sidebar />
+            {/* Center column */}
+            <main
+              className="flex-1 flex flex-col min-h-svh max-w-[620px] border-x"
+              style={{ borderColor: "var(--border)" }}
+            >
+              {children}
+            </main>
 
-          {/* Center column */}
-          <main className="flex-1 flex flex-col min-h-screen border-x border-line max-w-[600px] bg-canvas">
-            {children}
-          </main>
+            {/* Right rail — desktop only */}
+            <aside className="hidden lg:flex flex-col gap-4 w-[360px] shrink-0 px-5 py-6 sticky top-0 max-h-screen overflow-y-auto self-start">
+              {/* Search bar — white */}
+              <div
+                className="flex items-center gap-3 h-12 px-4 rounded-full"
+                style={{ background: "var(--surface)", boxShadow: "var(--card-shadow)" }}
+              >
+                <svg viewBox="0 0 24 24" className="size-[18px] shrink-0" fill="none" stroke="var(--text-faint)" strokeWidth="2" strokeLinecap="round">
+                  <circle cx="11" cy="11" r="6.5" />
+                  <path d="m20 20-3.5-3.5" />
+                </svg>
+                <span className="text-[15px]" style={{ color: "var(--text-faint)" }}>
+                  Rechercher sur Breezy
+                </span>
+              </div>
 
-          {/* Right column — desktop */}
-          <aside className="hidden lg:flex flex-col gap-5 w-[320px] shrink-0 px-5 py-4 sticky top-0 h-screen overflow-y-auto">
-            {/* Search */}
-            <div className="flex items-center gap-[10px] h-[42px] bg-surface rounded-full px-4">
-              <svg viewBox="0 0 24 24" className="size-4 shrink-0" fill="none" stroke="#6B6B6B" strokeWidth="2" strokeLinecap="round">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              <span className="text-[14px] text-muted">Rechercher sur Breezy</span>
-            </div>
+              {/* Suggestions pour toi */}
+              <div
+                className="rounded-[20px] overflow-hidden"
+                style={{ background: "var(--surface)", boxShadow: "var(--card-shadow)" }}
+              >
+                <p className="px-5 pt-4 pb-2 font-display font-bold text-[17px]" style={{ color: "var(--text)" }}>
+                  Suggestions pour toi
+                </p>
+                {SUGGESTIONS.map(({ name, handle, avatar, followed }) => (
+                  <div
+                    key={handle}
+                    className="flex items-center gap-3 px-5 py-2.5"
+                  >
+                    <Avatar displayName={name} src={avatar} size={40} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[14px] font-bold truncate" style={{ color: "var(--text)" }}>{name}</p>
+                      <p className="text-[13px] truncate" style={{ color: "var(--text-faint)" }}>@{handle}</p>
+                    </div>
+                    <button
+                      className="h-8 px-4 rounded-full text-[13px] font-bold transition-colors"
+                      style={
+                        followed
+                          ? { background: "var(--surface-2)", color: "var(--text-muted)" }
+                          : { background: "var(--primary-soft)", color: "var(--primary)" }
+                      }
+                    >
+                      {followed ? "Suivi" : "Suivre"}
+                    </button>
+                  </div>
+                ))}
+              </div>
 
-            {/* Suggestions card */}
-            <div className="border border-line rounded-[14px] overflow-hidden">
-              <p className="px-4 pt-[14px] pb-[10px] text-[17px] font-extrabold text-ink tracking-tight">
-                Suggestions
+              {/* Tendances */}
+              <div
+                className="rounded-[20px] overflow-hidden"
+                style={{ background: "var(--surface)", boxShadow: "var(--card-shadow)" }}
+              >
+                <p className="px-5 pt-4 pb-2 font-display font-bold text-[17px]" style={{ color: "var(--text)" }}>
+                  Tendances
+                </p>
+                {TENDANCES.map(({ category, tag, posts }) => (
+                  <div
+                    key={tag}
+                    className="px-5 py-3 cursor-pointer transition-colors hover:opacity-80"
+                  >
+                    <p className="text-[12px]" style={{ color: "var(--text-faint)" }}>{category}</p>
+                    <p className="text-[15px] font-bold" style={{ color: "var(--text)" }}>{tag}</p>
+                    <p className="text-[12.5px]" style={{ color: "var(--text-faint)" }}>{posts} posts</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Footer */}
+              <p className="px-1 text-[12px]" style={{ color: "var(--text-faint)" }}>
+                Breezy · Conditions · Confidentialité · © 2026
               </p>
-              {[
-                { name: "Marc Lefèvre", handle: "marcl" },
-                { name: "Lena Kim", handle: "lenak" },
-                { name: "Paul Renard", handle: "paulr" },
-              ].map(({ name, handle }) => (
-                <div key={handle} className="flex items-center gap-[10px] px-4 py-[10px] hover:bg-canvas cursor-pointer transition-colors">
-                  <div className="size-[38px] rounded-full bg-ink flex items-center justify-center text-white text-[13px] font-bold shrink-0">
-                    {name[0]}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[14px] font-bold text-ink truncate">{name}</p>
-                    <p className="text-[13px] text-sub truncate">@{handle}</p>
-                  </div>
-                  <button className="h-[30px] px-[14px] bg-ink text-white rounded-full text-[13px] font-bold shrink-0 hover:bg-black/90 transition-colors cursor-pointer">
-                    Suivre
-                  </button>
-                </div>
-              ))}
-            </div>
-          </aside>
+            </aside>
+          </div>
         </div>
-      </div>
 
-      {/* Mobile bottom nav */}
-      <BottomNav />
+        {/* Mobile floating dock */}
+        <Dock />
 
-      {/* Mobile bottom spacer */}
-      <div className="h-[60px] md:hidden" />
-    </div>
+        {/* Global compose sheet */}
+        <ComposeSheet />
+      </ComposeProvider>
     </AuthGuard>
   );
 }

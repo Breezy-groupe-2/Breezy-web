@@ -1,19 +1,19 @@
-'use client';
+"use client";
 
-import { useState, useEffect, type FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/use-auth';
-import { Spinner } from '@/components/ui';
-import { registerUser } from './auth.api';
-import { getRegisterStep1, clearRegisterStep1 } from './register-session';
-import { isAxiosError } from 'axios';
+import { useState, useEffect, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/use-auth";
+import { Spinner } from "@/components/ui";
+import { registerUser } from "./auth.api";
+import { getRegisterStep1, clearRegisterStep1 } from "./register-session";
+import { isAxiosError } from "@/lib/axios";
 
 export function RegisterStep2Form() {
   const router = useRouter();
   const { login } = useAuth();
 
-  const [email] = useState(() => getRegisterStep1()?.email ?? '');
-  const [username, setUsername] = useState('');
+  const [email] = useState(() => getRegisterStep1()?.email ?? "");
+  const [username, setUsername] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -21,13 +21,13 @@ export function RegisterStep2Form() {
   useEffect(() => {
     const step1 = getRegisterStep1();
     if (!step1) {
-      router.replace('/register');
+      router.replace("/register");
     }
   }, [router]);
 
   function validateUsername(value: string) {
     if (!value) return "Le nom d'utilisateur est requis.";
-    if (!/^[a-zA-Z0-9_]{3,20}$/.test(value)) return '3 à 20 caractères : lettres, chiffres ou _.';
+    if (!/^[a-zA-Z0-9_]{3,20}$/.test(value)) return "3 à 20 caractères : lettres, chiffres ou _.";
     return null;
   }
 
@@ -41,7 +41,7 @@ export function RegisterStep2Form() {
 
     const step1 = getRegisterStep1();
     if (!step1) {
-      router.replace('/register');
+      router.replace("/register");
       return;
     }
 
@@ -54,20 +54,20 @@ export function RegisterStep2Form() {
       });
       clearRegisterStep1();
       login(token, user);
-      router.push('/home');
+      router.push("/home");
     } catch (err) {
       if (isAxiosError(err) && err.response) {
-        const msg = err.response.data?.message ?? 'Une erreur est survenue.';
+        const msg = err.response.data?.message ?? "Une erreur est survenue.";
         setError(msg);
       } else {
-        setError('Une erreur est survenue. Réessaie plus tard.');
+        setError("Une erreur est survenue. Réessaie plus tard.");
       }
     } finally {
       setIsLoading(false);
     }
   }
 
-  const initials = username ? username[0].toUpperCase() : '?';
+  const initials = username ? username[0].toUpperCase() : "?";
 
   if (!email) {
     return (
@@ -123,9 +123,9 @@ export function RegisterStep2Form() {
           }}
           placeholder="alexmartin"
           className={[
-            'w-full h-[60px] border-2 rounded-[14px] pl-[38px] pr-[18px] text-[22px] font-bold text-ink bg-white placeholder:text-muted outline-none transition-colors tracking-[-0.5px]',
-            fieldError ? 'border-red-400 focus:border-red-400' : 'border-ink',
-          ].join(' ')}
+            "w-full h-[60px] border-2 rounded-[14px] pl-[38px] pr-[18px] text-[22px] font-bold text-ink bg-white placeholder:text-muted outline-none transition-colors tracking-[-0.5px]",
+            fieldError ? "border-red-400 focus:border-red-400" : "border-ink",
+          ].join(" ")}
         />
       </div>
 
@@ -161,8 +161,8 @@ export function RegisterStep2Form() {
             {initials}
           </div>
           <div>
-            <p className="text-[15px] font-bold text-ink">{username || '—'}</p>
-            <p className="text-[13px] text-sub">@{username || '—'}</p>
+            <p className="text-[15px] font-bold text-ink">{username || "—"}</p>
+            <p className="text-[13px] text-sub">@{username || "—"}</p>
           </div>
         </div>
       </div>

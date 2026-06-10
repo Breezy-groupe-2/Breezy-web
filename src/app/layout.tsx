@@ -1,30 +1,41 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Bricolage_Grotesque, Inter } from "next/font/google";
 import { AuthProvider } from "@/store/auth-context";
+import { ThemeProvider } from "@/store/theme-context";
 import { MSWProvider } from "@/mocks/MSWProvider";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-inter",
+const displayFont = Bricolage_Grotesque({
+  variable: "--font-bricolage",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+});
+
+const bodyFont = Inter({
+  variable: "--font-jakarta",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
   title: "Breezy",
-  description: "Ce qui compte, partagé simplement.",
+  description: "Des idées légères, partagées en 280 caractères.",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="fr" className={inter.variable}>
-      <body className="min-h-screen bg-canvas text-ink font-sans antialiased">
+    <html
+      lang="fr"
+      className={`${displayFont.variable} ${bodyFont.variable}`}
+      suppressHydrationWarning
+    >
+      <body className="min-h-svh bg-bg text-text font-sans antialiased">
         <MSWProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <ThemeProvider>{children}</ThemeProvider>
+          </AuthProvider>
         </MSWProvider>
       </body>
     </html>

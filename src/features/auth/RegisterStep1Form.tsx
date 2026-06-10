@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useState, type FormEvent } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { BreezyLogo } from '@/components/ui';
-import { REGISTER_STEP1_KEY, type RegisterStep1Data } from './register-session';
+import { useState, type FormEvent } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { BreezyLogo } from "@/components/ui";
+import { REGISTER_STEP1_KEY, type RegisterStep1Data } from "./register-session";
 
 const GoogleIcon = () => (
   <svg viewBox="0 0 48 48" className="size-[18px] shrink-0">
@@ -30,17 +30,17 @@ const GoogleIcon = () => (
 export function RegisterStep1Form() {
   const router = useRouter();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   function validate() {
     const errors: Record<string, string> = {};
     if (!email) errors.email = "L'email est requis.";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'Adresse email invalide.';
-    if (!password) errors.password = 'Le mot de passe est requis.';
-    else if (password.length < 8) errors.password = 'Minimum 8 caractères.';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = "Adresse email invalide.";
+    if (!password) errors.password = "Le mot de passe est requis.";
+    else if (password.length < 8) errors.password = "Minimum 8 caractères.";
     return errors;
   }
 
@@ -54,13 +54,13 @@ export function RegisterStep1Form() {
 
     const data: RegisterStep1Data = { email, password };
     sessionStorage.setItem(REGISTER_STEP1_KEY, JSON.stringify(data));
-    router.push('/register/username');
+    router.push("/register/username");
   }
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col" noValidate>
       <div className="md:hidden mb-7">
-        <BreezyLogo iconSize={36} textSize="text-[20px]" />
+        <BreezyLogo size={36} />
       </div>
 
       <h1 className="text-[26px] font-extrabold text-ink tracking-tight mb-1">Créer un compte</h1>
@@ -103,11 +103,11 @@ export function RegisterStep1Form() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="alex@example.com"
             className={[
-              'w-full h-12 border-[1.5px] rounded-[10px] px-[14px] text-[15px] text-ink bg-canvas placeholder:text-muted outline-none transition-colors',
+              "w-full h-12 border-[1.5px] rounded-[10px] px-[14px] text-[15px] text-ink bg-canvas placeholder:text-muted outline-none transition-colors",
               fieldErrors.email
-                ? 'border-red-400 focus:border-red-400'
-                : 'border-line focus:border-ink focus:bg-white',
-            ].join(' ')}
+                ? "border-red-400 focus:border-red-400"
+                : "border-line focus:border-ink focus:bg-white",
+            ].join(" ")}
           />
           {fieldErrors.email && <p className="text-[12px] text-red-500">{fieldErrors.email}</p>}
         </div>
@@ -128,11 +128,11 @@ export function RegisterStep1Form() {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
             className={[
-              'w-full h-12 border-[1.5px] rounded-[10px] px-[14px] text-[15px] text-ink bg-canvas placeholder:text-muted outline-none transition-colors',
+              "w-full h-12 border-[1.5px] rounded-[10px] px-[14px] text-[15px] text-ink bg-canvas placeholder:text-muted outline-none transition-colors",
               fieldErrors.password
-                ? 'border-red-400 focus:border-red-400'
-                : 'border-line focus:border-ink focus:bg-white',
-            ].join(' ')}
+                ? "border-red-400 focus:border-red-400"
+                : "border-line focus:border-ink focus:bg-white",
+            ].join(" ")}
           />
           {fieldErrors.password && (
             <p className="text-[12px] text-red-500">{fieldErrors.password}</p>
@@ -149,7 +149,7 @@ export function RegisterStep1Form() {
       </button>
 
       <p className="text-[14px] text-sub text-center">
-        Déjà un compte ?{' '}
+        Déjà un compte ?{" "}
         <Link href="/login" className="text-ink font-bold underline">
           Se connecter
         </Link>
