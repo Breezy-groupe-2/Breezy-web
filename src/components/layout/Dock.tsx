@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Icon } from "@/components/ui";
 import { useCompose } from "@/store/compose-context";
 import { useTheme } from "@/store/theme-context";
+import { useAuth } from "@/hooks/use-auth";
 
 const NAV_ITEMS = [
   { key: "home",    href: "/home",             icon: "home"    as const, iconFill: "homeFill" as const },
@@ -17,6 +18,7 @@ export function Dock() {
   const pathname = usePathname();
   const { openCompose } = useCompose();
   const { theme } = useTheme();
+  const { user } = useAuth();
   const dark = theme === "dark";
 
   return (
@@ -88,6 +90,22 @@ export function Dock() {
             </Link>
           );
         })}
+
+        {user?.isAdmin && (
+          <Link href="/admin">
+            <div
+              className="w-12 h-12 flex items-center justify-center rounded-full transition-colors"
+              style={{ background: pathname.startsWith("/admin") ? "var(--primary-soft)" : "transparent" }}
+            >
+              <Icon
+                name="shieldFill"
+                size={24}
+                color={pathname.startsWith("/admin") ? "var(--primary)" : "var(--text-muted)"}
+                stroke={2}
+              />
+            </div>
+          </Link>
+        )}
       </div>
     </nav>
   );

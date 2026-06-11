@@ -62,6 +62,19 @@ export interface Notification {
   createdAt: string;
 }
 
+export type ReportReason = "Spam" | "Harcèlement" | "Contenu inapproprié" | "Désinformation";
+
+export interface Report {
+  id: string;
+  kind: "post" | "comment";
+  authorUsername: string;
+  reason: ReportReason;
+  count: number;
+  time: string;
+  text: string;
+  onPostAuthorUsername?: string;
+}
+
 export interface AuthResponse {
   token: string;
   user: User;
