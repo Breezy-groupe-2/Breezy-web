@@ -1,15 +1,15 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
-import { Avatar, Icon, LikeButton } from "@/components/ui";
-import { CommentItem } from "@/features/comments/CommentItem";
-import { getPost, likePost, unlikePost, deletePost, updatePost } from "@/features/posts/posts.api";
-import { getComments, addComment } from "@/features/comments/comments.api";
-import { useAuth } from "@/hooks/use-auth";
-import { formatRelative } from "@/lib/time";
-import type { Post, Comment } from "@/types";
+import { useState, useEffect, useRef } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { Avatar, Icon, LikeButton } from '@/components/ui';
+import { CommentItem } from '@/features/comments/CommentItem';
+import { getPost, likePost, unlikePost, deletePost, updatePost } from '@/features/posts/posts.api';
+import { getComments, addComment } from '@/features/comments/comments.api';
+import { useAuth } from '@/hooks/use-auth';
+import { formatRelative } from '@/lib/time';
+import type { Post, Comment } from '@/types';
 
 export default function PostDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -19,11 +19,11 @@ export default function PostDetailPage() {
   const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [commentText, setCommentText] = useState("");
+  const [commentText, setCommentText] = useState('');
   const [sending, setSending] = useState(false);
   const [postMenuOpen, setPostMenuOpen] = useState(false);
   const [editingPost, setEditingPost] = useState(false);
-  const [editPostText, setEditPostText] = useState("");
+  const [editPostText, setEditPostText] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const postMenuRef = useRef<HTMLDivElement>(null);
 
@@ -36,8 +36,8 @@ export default function PostDetailPage() {
         setPostMenuOpen(false);
       }
     }
-    document.addEventListener("mousedown", onOutside);
-    return () => document.removeEventListener("mousedown", onOutside);
+    document.addEventListener('mousedown', onOutside);
+    return () => document.removeEventListener('mousedown', onOutside);
   }, [postMenuOpen]);
 
   useEffect(() => {
@@ -70,7 +70,7 @@ export default function PostDetailPage() {
       const created = await addComment(post.id, commentText.trim());
       setComments((prev) => [...prev, created]);
       setPost((p) => (p ? { ...p, commentsCount: p.commentsCount + 1 } : p));
-      setCommentText("");
+      setCommentText('');
     } finally {
       setSending(false);
     }
@@ -78,22 +78,34 @@ export default function PostDetailPage() {
 
   async function handleDeletePost() {
     if (!post) return;
-    await deletePost(post.id);
-    router.back();
+    try {
+      await deletePost(post.id);
+      router.back();
+    } catch {
+      // Delete failed — post stays visible
+    }
   }
 
   async function savePostEdit() {
     if (!post || !editPostText.trim()) return;
-    const updated = await updatePost(post.id, editPostText.trim());
-    setPost(updated);
-    setEditingPost(false);
+    try {
+      const updated = await updatePost(post.id, editPostText.trim());
+      setPost(updated);
+      setEditingPost(false);
+    } catch {
+      // API call failed; stay in edit mode so user can retry
+    }
   }
 
   function handleLikeComment(commentId: number) {
     setComments((prev) =>
       prev.map((c) =>
         c.id === commentId
-          ? { ...c, isLiked: !c.isLiked, likesCount: c.isLiked ? c.likesCount - 1 : c.likesCount + 1 }
+          ? {
+              ...c,
+              isLiked: !c.isLiked,
+              likesCount: c.isLiked ? c.likesCount - 1 : c.likesCount + 1,
+            }
           : c
       )
     );
@@ -116,22 +128,19 @@ export default function PostDetailPage() {
       <div
         className="sticky top-0 z-30 flex items-center gap-3 px-4 py-3 pt-[54px] md:pt-3"
         style={{
-          background: "color-mix(in oklch, var(--bg) 82%, transparent)",
-          backdropFilter: "blur(12px)",
-          WebkitBackdropFilter: "blur(12px)",
+          background: 'color-mix(in oklch, var(--bg) 82%, transparent)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
         }}
       >
         <button
           onClick={() => router.back()}
           className="w-[42px] h-[42px] flex items-center justify-center rounded-full"
-          style={{ background: "var(--surface)", boxShadow: "var(--card-shadow)" }}
+          style={{ background: 'var(--surface)', boxShadow: 'var(--card-shadow)' }}
         >
           <Icon name="back" size={20} color="var(--text)" />
         </button>
-        <span
-          className="font-display font-bold text-[19px]"
-          style={{ color: "var(--text)" }}
-        >
+        <span className="font-display font-bold text-[19px]" style={{ color: 'var(--text)' }}>
           Post
         </span>
       </div>
@@ -141,13 +150,16 @@ export default function PostDetailPage() {
         <div className="px-5 py-3">
           {/* Post header */}
           <div className="flex items-center gap-3">
-            <Link href={`/profile/${author.username}`} className="flex items-center gap-3 flex-1 min-w-0">
+            <Link
+              href={`/profile/${author.username}`}
+              className="flex items-center gap-3 flex-1 min-w-0"
+            >
               <Avatar displayName={author.displayName} src={author.avatarUrl} size={48} />
               <div>
-                <p className="font-display font-bold text-[16px]" style={{ color: "var(--text)" }}>
+                <p className="font-display font-bold text-[16px]" style={{ color: 'var(--text)' }}>
                   {author.displayName}
                 </p>
-                <p className="text-[13.5px]" style={{ color: "var(--text-faint)" }}>
+                <p className="text-[13.5px]" style={{ color: 'var(--text-faint)' }}>
                   @{author.username}
                 </p>
               </div>
@@ -162,19 +174,27 @@ export default function PostDetailPage() {
               {isOwn && postMenuOpen && (
                 <div
                   className="absolute right-0 top-10 w-[170px] rounded-[14px] border overflow-hidden z-20"
-                  style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 4px 20px rgba(0,0,0,0.12)" }}
+                  style={{
+                    background: 'var(--surface)',
+                    borderColor: 'var(--border)',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
+                  }}
                 >
                   <button
-                    onClick={() => { setEditPostText(post.content); setEditingPost(true); setPostMenuOpen(false); }}
+                    onClick={() => {
+                      setEditPostText(post.content);
+                      setEditingPost(true);
+                      setPostMenuOpen(false);
+                    }}
                     className="flex items-center gap-3 w-full px-4 py-3 text-[14px] font-semibold transition-colors"
-                    style={{ color: "var(--text)" }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface-2)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    style={{ color: 'var(--text)' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-2)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                   >
                     <Icon name="edit" size={15} color="var(--text)" />
                     Modifier
                   </button>
-                  <div className="border-t" style={{ borderColor: "var(--border)" }} />
+                  <div className="border-t" style={{ borderColor: 'var(--border)' }} />
                   <button
                     onClick={handleDeletePost}
                     className="flex items-center gap-3 w-full px-4 py-3 text-[14px] font-semibold text-red-500 hover:bg-red-50 transition-colors"
@@ -197,17 +217,20 @@ export default function PostDetailPage() {
                 maxLength={280}
                 rows={4}
                 className="w-full bg-transparent border-none outline-none resize-none text-[19px] leading-relaxed font-sans"
-                style={{ color: "var(--text)" }}
+                style={{ color: 'var(--text)' }}
               />
-              <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: "var(--border)" }}>
-                <span className="text-[12px] font-semibold" style={{ color: "var(--text-faint)" }}>
+              <div
+                className="flex items-center justify-between pt-2 border-t"
+                style={{ borderColor: 'var(--border)' }}
+              >
+                <span className="text-[12px] font-semibold" style={{ color: 'var(--text-faint)' }}>
                   {280 - editPostText.length}
                 </span>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setEditingPost(false)}
                     className="h-8 px-3 rounded-full text-[13px] font-bold border"
-                    style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}
+                    style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
                   >
                     Annuler
                   </button>
@@ -215,7 +238,7 @@ export default function PostDetailPage() {
                     onClick={savePostEdit}
                     disabled={!editPostText.trim() || editPostText.length > 280}
                     className="h-8 px-4 rounded-full text-[13px] font-bold disabled:opacity-50"
-                    style={{ background: "var(--primary)", color: "var(--on-primary)" }}
+                    style={{ background: 'var(--primary)', color: 'var(--on-primary)' }}
                   >
                     OK
                   </button>
@@ -225,7 +248,7 @@ export default function PostDetailPage() {
           ) : (
             <p
               className="text-[19px] leading-relaxed mt-4 mb-3 whitespace-pre-wrap"
-              style={{ color: "var(--text)", textWrap: "pretty" } as React.CSSProperties}
+              style={{ color: 'var(--text)', textWrap: 'pretty' } as React.CSSProperties}
             >
               {post.content}
             </p>
@@ -234,7 +257,7 @@ export default function PostDetailPage() {
           {/* Timestamp */}
           <p
             className="text-[13.5px] pb-3 border-b"
-            style={{ color: "var(--text-faint)", borderColor: "var(--border)" }}
+            style={{ color: 'var(--text-faint)', borderColor: 'var(--border)' }}
           >
             {formatRelative(post.createdAt)} · Aujourd&apos;hui
           </p>
@@ -242,18 +265,18 @@ export default function PostDetailPage() {
           {/* Stats */}
           <div
             className="flex gap-5 py-3 text-[14px] border-b"
-            style={{ color: "var(--text-muted)", borderColor: "var(--border)" }}
+            style={{ color: 'var(--text-muted)', borderColor: 'var(--border)' }}
           >
             <span>
-              <b className="font-display font-bold" style={{ color: "var(--text)" }}>
+              <b className="font-display font-bold" style={{ color: 'var(--text)' }}>
                 {post.likesCount}
-              </b>{" "}
+              </b>{' '}
               j&apos;aime
             </span>
             <span>
-              <b className="font-display font-bold" style={{ color: "var(--text)" }}>
+              <b className="font-display font-bold" style={{ color: 'var(--text)' }}>
                 {totalComments}
-              </b>{" "}
+              </b>{' '}
               commentaires
             </span>
           </div>
@@ -261,12 +284,12 @@ export default function PostDetailPage() {
           {/* Action bar */}
           <div
             className="flex justify-around py-2 border-b"
-            style={{ borderColor: "var(--border)" }}
+            style={{ borderColor: 'var(--border)' }}
           >
-            <button style={{ color: "var(--text-faint)" }}>
+            <button style={{ color: 'var(--text-faint)' }}>
               <Icon name="comment" size={22} />
             </button>
-            <button style={{ color: "var(--text-faint)" }}>
+            <button style={{ color: 'var(--text-faint)' }}>
               <Icon name="repost" size={22} />
             </button>
             <LikeButton
@@ -275,7 +298,7 @@ export default function PostDetailPage() {
               onToggle={handleLike}
               size={22}
             />
-            <button style={{ color: "var(--text-faint)" }}>
+            <button style={{ color: 'var(--text-faint)' }}>
               <Icon name="share" size={22} />
             </button>
           </div>
@@ -283,7 +306,7 @@ export default function PostDetailPage() {
           {/* Comments */}
           <div className="flex flex-col gap-4 pt-5">
             {comments.length === 0 && (
-              <p className="text-center text-[14px] py-5" style={{ color: "var(--text-faint)" }}>
+              <p className="text-center text-[14px] py-5" style={{ color: 'var(--text-faint)' }}>
                 Sois le premier à répondre 🌱
               </p>
             )}
@@ -326,10 +349,10 @@ export default function PostDetailPage() {
       <div
         className="sticky bottom-0 flex items-center gap-2.5 px-4 py-3"
         style={{
-          background: "color-mix(in oklch, var(--bg) 85%, transparent)",
-          backdropFilter: "blur(12px)",
-          borderTop: "1px solid var(--border)",
-          paddingBottom: "calc(12px + env(safe-area-inset-bottom))",
+          background: 'color-mix(in oklch, var(--bg) 85%, transparent)',
+          backdropFilter: 'blur(12px)',
+          borderTop: '1px solid var(--border)',
+          paddingBottom: 'calc(12px + env(safe-area-inset-bottom))',
         }}
       >
         {me && <Avatar displayName={me.displayName} size={34} />}
@@ -337,20 +360,20 @@ export default function PostDetailPage() {
           ref={inputRef}
           value={commentText}
           onChange={(e) => setCommentText(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleAddComment()}
+          onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
           placeholder="Ajouter un commentaire…"
           className="flex-1 h-[42px] px-4 text-[14.5px] border-none outline-none rounded-full"
           style={{
-            background: "var(--surface)",
-            border: "1.5px solid var(--border)",
-            color: "var(--text)",
+            background: 'var(--surface)',
+            border: '1.5px solid var(--border)',
+            color: 'var(--text)',
           }}
         />
         <button
           onClick={handleAddComment}
           disabled={!commentText.trim() || sending}
           className="w-[42px] h-[42px] flex items-center justify-center rounded-full disabled:opacity-50"
-          style={{ background: "var(--primary)" }}
+          style={{ background: 'var(--primary)' }}
         >
           {sending ? (
             <span className="w-4 h-4 rounded-full border-2 border-on-primary border-t-transparent animate-spin block" />

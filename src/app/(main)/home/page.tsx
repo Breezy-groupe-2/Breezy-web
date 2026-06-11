@@ -1,17 +1,23 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useCallback } from "react";
-import { BreezyLogo, Icon, Avatar } from "@/components/ui";
-import { PostCard } from "@/features/posts/PostCard";
-import { FeedSwitch } from "@/features/feed/FeedSwitch";
-import { getFeed } from "@/features/feed/feed.api";
-import { createPost, likePost, unlikePost, deletePost } from "@/features/posts/posts.api";
-import { useCompose } from "@/store/compose-context";
-import { useTheme } from "@/store/theme-context";
-import { useAuth } from "@/hooks/use-auth";
-import type { Post } from "@/types";
+import { useState, useEffect, useCallback } from 'react';
+import { BreezyLogo, Icon, Avatar } from '@/components/ui';
+import { PostCard } from '@/features/posts/PostCard';
+import { FeedSwitch } from '@/features/feed/FeedSwitch';
+import { getFeed } from '@/features/feed/feed.api';
+import {
+  createPost,
+  likePost,
+  unlikePost,
+  deletePost,
+  updatePost,
+} from '@/features/posts/posts.api';
+import { useCompose } from '@/store/compose-context';
+import { useTheme } from '@/store/theme-context';
+import { useAuth } from '@/hooks/use-auth';
+import type { Post } from '@/types';
 
-type FeedTab = "mine" | "all";
+type FeedTab = 'mine' | 'all';
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -20,9 +26,9 @@ export default function HomePage() {
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [feedTab, setFeedTab] = useState<FeedTab>("all");
+  const [feedTab, setFeedTab] = useState<FeedTab>('all');
   const [following] = useState(new Set<string>());
-  const [composeText, setComposeText] = useState("");
+  const [composeText, setComposeText] = useState('');
   const [posting, setPosting] = useState(false);
 
   useEffect(() => {
@@ -64,7 +70,11 @@ export default function HomePage() {
       prev.map((p) => {
         if (p.id === id) {
           wasLiked = p.isLiked;
-          return { ...p, isLiked: !p.isLiked, likesCount: p.isLiked ? p.likesCount - 1 : p.likesCount + 1 };
+          return {
+            ...p,
+            isLiked: !p.isLiked,
+            likesCount: p.isLiked ? p.likesCount - 1 : p.likesCount + 1,
+          };
         }
         return p;
       })
@@ -73,7 +83,11 @@ export default function HomePage() {
       setPosts((prev) =>
         prev.map((p) =>
           p.id === id
-            ? { ...p, isLiked: wasLiked, likesCount: wasLiked ? p.likesCount + 1 : p.likesCount - 1 }
+            ? {
+                ...p,
+                isLiked: wasLiked,
+                likesCount: wasLiked ? p.likesCount + 1 : p.likesCount - 1,
+              }
             : p
         )
       );
@@ -95,25 +109,24 @@ export default function HomePage() {
     });
   }
 
-  function handleUpdate(id: number, newContent: string) {
-    setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, content: newContent } : p)));
+  async function handleUpdate(id: number, newContent: string) {
+    const updated = await updatePost(id, newContent);
+    setPosts((prev) => prev.map((p) => (p.id === id ? updated : p)));
   }
 
   async function handleDesktopPost() {
     if (!composeText.trim() || posting) return;
     setPosting(true);
     await handlePost(composeText.trim());
-    setComposeText("");
+    setComposeText('');
     setPosting(false);
   }
 
   const displayedPosts =
-    feedTab === "all"
+    feedTab === 'all'
       ? posts
       : posts.filter(
-          (p) =>
-            p.author.username === user?.username ||
-            following.has(p.author.username)
+          (p) => p.author.username === user?.username || following.has(p.author.username)
         );
 
   return (
@@ -122,9 +135,9 @@ export default function HomePage() {
       <div
         className="sticky top-0 z-30 pt-[54px] md:pt-0"
         style={{
-          background: "color-mix(in oklch, var(--bg) 82%, transparent)",
-          backdropFilter: "blur(14px)",
-          WebkitBackdropFilter: "blur(14px)",
+          background: 'color-mix(in oklch, var(--bg) 82%, transparent)',
+          backdropFilter: 'blur(14px)',
+          WebkitBackdropFilter: 'blur(14px)',
         }}
       >
         {/* Mobile only: logo row */}
@@ -140,9 +153,9 @@ export default function HomePage() {
           <button
             onClick={toggleTheme}
             className="w-[38px] h-[38px] flex items-center justify-center rounded-full shrink-0"
-            style={{ background: "var(--surface)", boxShadow: "var(--card-shadow)" }}
+            style={{ background: 'var(--surface)', boxShadow: 'var(--card-shadow)' }}
           >
-            <Icon name={theme === "dark" ? "sun" : "moon"} size={18} color="var(--text)" />
+            <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={18} color="var(--text)" />
           </button>
         </div>
       </div>
@@ -150,7 +163,7 @@ export default function HomePage() {
       {/* Desktop inline composer */}
       <div
         className="hidden md:flex gap-3 px-5 py-4 border-b"
-        style={{ borderColor: "var(--border)" }}
+        style={{ borderColor: 'var(--border)' }}
       >
         {user && <Avatar displayName={user.displayName} src={user.avatarUrl} size={44} />}
         <div className="flex-1">
@@ -160,32 +173,32 @@ export default function HomePage() {
             placeholder="Quoi de neuf dans ta brise ?"
             rows={2}
             className="w-full bg-transparent border-none outline-none resize-none text-[18px] leading-relaxed font-sans"
-            style={{ color: "var(--text)" }}
+            style={{ color: 'var(--text)' }}
           />
           <div
             className="flex items-center justify-between pt-3"
-            style={{ borderTop: "1px solid var(--border)" }}
+            style={{ borderTop: '1px solid var(--border)' }}
           >
             <div className="flex gap-1">
-              {(["image", "gust"] as const).map((n) => (
+              {(['image', 'gust'] as const).map((n) => (
                 <button
                   key={n}
                   className="w-9 h-9 flex items-center justify-center rounded-full"
-                  style={{ color: "var(--primary)" }}
+                  style={{ color: 'var(--primary)' }}
                 >
                   <Icon name={n} size={20} />
                 </button>
               ))}
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-[12px] font-semibold" style={{ color: "var(--text-faint)" }}>
+              <span className="text-[12px] font-semibold" style={{ color: 'var(--text-faint)' }}>
                 {280 - composeText.length}
               </span>
               <button
                 onClick={handleDesktopPost}
                 disabled={!composeText.trim() || composeText.length > 280 || posting}
                 className="h-9 px-5 rounded-full text-[14px] font-bold disabled:opacity-50"
-                style={{ background: "var(--primary)", color: "var(--on-primary)" }}
+                style={{ background: 'var(--primary)', color: 'var(--on-primary)' }}
               >
                 Poster
               </button>
@@ -197,27 +210,25 @@ export default function HomePage() {
       {/* Feed */}
       {loading ? (
         <div className="flex justify-center py-12">
-          <span
-            className="w-8 h-8 rounded-full border-[3px] border-primary border-t-transparent animate-spin block"
-          />
+          <span className="w-8 h-8 rounded-full border-[3px] border-primary border-t-transparent animate-spin block" />
         </div>
       ) : displayedPosts.length === 0 ? (
-        <EmptyFeed onDiscover={() => setFeedTab("all")} />
+        <EmptyFeed onDiscover={() => setFeedTab('all')} />
       ) : (
         <div className="flex flex-col gap-3 p-3.5 pb-[120px] md:pb-8">
           {displayedPosts.map((post) => (
             <PostCard
-                key={post.id}
-                post={post}
-                isOwn={post.author.username === user?.username}
-                onLike={handleLike}
-                onDelete={handleDelete}
-                onUpdate={handleUpdate}
-              />
+              key={post.id}
+              post={post}
+              isOwn={post.author.username === user?.username}
+              onLike={handleLike}
+              onDelete={handleDelete}
+              onUpdate={handleUpdate}
+            />
           ))}
           <div
             className="flex items-center justify-center gap-2 py-3 text-[13px]"
-            style={{ color: "var(--text-faint)" }}
+            style={{ color: 'var(--text-faint)' }}
           >
             <Icon name="gust" size={16} color="var(--text-faint)" />
             tu es à jour
@@ -235,27 +246,27 @@ function EmptyFeed({ onDiscover }: { onDiscover: () => void }) {
         className="w-[88px] h-[88px] flex items-center justify-center"
         style={{
           borderRadius: 30,
-          background: "var(--primary-soft)",
-          animation: "b-sway 4s ease-in-out infinite",
+          background: 'var(--primary-soft)',
+          animation: 'b-sway 4s ease-in-out infinite',
         }}
       >
         <Icon name="gust" size={42} color="var(--primary)" stroke={1.8} />
       </div>
       <div>
-        <p
-          className="font-display font-extrabold text-[21px]"
-          style={{ color: "var(--text)" }}
-        >
+        <p className="font-display font-extrabold text-[21px]" style={{ color: 'var(--text)' }}>
           Ton feed est tout neuf
         </p>
-        <p className="text-[15px] leading-relaxed mt-2 max-w-[260px]" style={{ color: "var(--text-muted)" }}>
+        <p
+          className="text-[15px] leading-relaxed mt-2 max-w-[260px]"
+          style={{ color: 'var(--text-muted)' }}
+        >
           Suis quelques personnes et leurs posts apparaîtront ici.
         </p>
       </div>
       <button
         onClick={onDiscover}
         className="h-9 px-5 rounded-full text-[14px] font-bold"
-        style={{ background: "var(--primary)", color: "var(--on-primary)" }}
+        style={{ background: 'var(--primary)', color: 'var(--on-primary)' }}
       >
         Voir le feed général
       </button>

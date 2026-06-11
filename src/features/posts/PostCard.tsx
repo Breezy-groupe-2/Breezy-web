@@ -1,11 +1,10 @@
-"use client";
+'use client';
 
-import { useState, useRef, useEffect } from "react";
-import Link from "next/link";
-import { Avatar, Icon, LikeButton } from "@/components/ui";
-import { updatePost } from "@/features/posts/posts.api";
-import type { Post } from "@/types";
-import { formatRelative } from "@/lib/time";
+import { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
+import { Avatar, Icon, LikeButton } from '@/components/ui';
+import type { Post } from '@/types';
+import { formatRelative } from '@/lib/time';
 
 interface PostCardProps {
   post: Post;
@@ -38,8 +37,8 @@ export function PostCard({
         setMenuOpen(false);
       }
     }
-    document.addEventListener("mousedown", onOutside);
-    return () => document.removeEventListener("mousedown", onOutside);
+    document.addEventListener('mousedown', onOutside);
+    return () => document.removeEventListener('mousedown', onOutside);
   }, [menuOpen]);
 
   async function saveEdit() {
@@ -51,9 +50,10 @@ export function PostCard({
     }
     setSaving(true);
     try {
-      await updatePost(post.id, trimmed);
-      onUpdate?.(post.id, trimmed);
+      await onUpdate?.(post.id, trimmed);
       setEditing(false);
+    } catch {
+      // API call failed; stay in edit mode so user can retry
     } finally {
       setSaving(false);
     }
@@ -69,12 +69,12 @@ export function PostCard({
       className="cursor-pointer"
       style={
         flat
-          ? { padding: "16px 20px", borderBottom: "1px solid var(--border)" }
+          ? { padding: '16px 20px', borderBottom: '1px solid var(--border)' }
           : {
-              background: "var(--surface)",
-              borderRadius: "var(--r-card)",
-              padding: "16px 17px 12px",
-              boxShadow: "var(--card-shadow)",
+              background: 'var(--surface)',
+              borderRadius: 'var(--r-card)',
+              padding: '16px 17px 12px',
+              boxShadow: 'var(--card-shadow)',
             }
       }
     >
@@ -90,15 +90,23 @@ export function PostCard({
               href={`/profile/${author.username}`}
               onClick={(e) => e.stopPropagation()}
               className="font-display font-bold text-[15px] whitespace-nowrap overflow-hidden text-ellipsis hover:underline"
-              style={{ color: "var(--text)" }}
+              style={{ color: 'var(--text)' }}
             >
               {author.displayName}
             </Link>
-            <span className="text-[13.5px] whitespace-nowrap" style={{ color: "var(--text-faint)" }}>
+            <span
+              className="text-[13.5px] whitespace-nowrap"
+              style={{ color: 'var(--text-faint)' }}
+            >
               @{author.username}
             </span>
-            <span className="text-[13.5px]" style={{ color: "var(--text-faint)" }}>·</span>
-            <span className="text-[13.5px] whitespace-nowrap" style={{ color: "var(--text-faint)" }}>
+            <span className="text-[13.5px]" style={{ color: 'var(--text-faint)' }}>
+              ·
+            </span>
+            <span
+              className="text-[13.5px] whitespace-nowrap"
+              style={{ color: 'var(--text-faint)' }}
+            >
               {formatRelative(post.createdAt)}
             </span>
 
@@ -120,9 +128,9 @@ export function PostCard({
                 <div
                   className="absolute right-0 top-6 w-[170px] rounded-[14px] border overflow-hidden z-20"
                   style={{
-                    background: "var(--surface)",
-                    borderColor: "var(--border)",
-                    boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+                    background: 'var(--surface)',
+                    borderColor: 'var(--border)',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
                   }}
                 >
                   <button
@@ -132,14 +140,14 @@ export function PostCard({
                       setMenuOpen(false);
                     }}
                     className="flex items-center gap-3 w-full px-4 py-3 text-[14px] font-semibold transition-colors"
-                    style={{ color: "var(--text)" }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface-2)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    style={{ color: 'var(--text)' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-2)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                   >
                     <Icon name="edit" size={15} color="var(--text)" />
                     Modifier
                   </button>
-                  <div className="border-t" style={{ borderColor: "var(--border)" }} />
+                  <div className="border-t" style={{ borderColor: 'var(--border)' }} />
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -166,15 +174,17 @@ export function PostCard({
                 maxLength={280}
                 rows={3}
                 className="w-full bg-transparent border-none outline-none resize-none text-[15.5px] leading-relaxed font-sans"
-                style={{ color: "var(--text)" }}
+                style={{ color: 'var(--text)' }}
               />
               <div
                 className="flex items-center justify-between pt-2 mt-1 border-t"
-                style={{ borderColor: "var(--border)" }}
+                style={{ borderColor: 'var(--border)' }}
               >
                 <span
                   className="text-[12px] font-semibold"
-                  style={{ color: 280 - editText.length < 20 ? "#e53e3e" : "var(--text-faint)" }}
+                  style={{
+                    color: 280 - editText.length < 20 ? 'var(--like)' : 'var(--text-faint)',
+                  }}
                 >
                   {280 - editText.length}
                 </span>
@@ -182,7 +192,7 @@ export function PostCard({
                   <button
                     onClick={cancelEdit}
                     className="h-8 px-3 rounded-full text-[13px] font-bold border"
-                    style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}
+                    style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
                   >
                     Annuler
                   </button>
@@ -190,9 +200,9 @@ export function PostCard({
                     onClick={saveEdit}
                     disabled={!editText.trim() || editText.length > 280 || saving}
                     className="h-8 px-4 rounded-full text-[13px] font-bold disabled:opacity-50"
-                    style={{ background: "var(--primary)", color: "var(--on-primary)" }}
+                    style={{ background: 'var(--primary)', color: 'var(--on-primary)' }}
                   >
-                    {saving ? "…" : "OK"}
+                    {saving ? '…' : 'OK'}
                   </button>
                 </div>
               </div>
@@ -201,7 +211,7 @@ export function PostCard({
             <Link href={`/post/${post.id}`}>
               <p
                 className="text-[15.5px] leading-relaxed whitespace-pre-wrap"
-                style={{ color: "var(--text)", textWrap: "pretty" } as React.CSSProperties}
+                style={{ color: 'var(--text)', textWrap: 'pretty' } as React.CSSProperties}
               >
                 {post.content}
               </p>
@@ -215,7 +225,7 @@ export function PostCard({
                 <button
                   onClick={(e) => e.stopPropagation()}
                   className="flex items-center gap-1.5 px-0.5 py-1 rounded-full text-[13.5px] font-semibold"
-                  style={{ color: "var(--text-faint)" }}
+                  style={{ color: 'var(--text-faint)' }}
                 >
                   <Icon name="comment" size={20} stroke={1.9} />
                   {post.commentsCount}
@@ -224,7 +234,7 @@ export function PostCard({
               <button
                 onClick={(e) => e.stopPropagation()}
                 className="flex items-center gap-1.5 px-0.5 py-1 rounded-full text-[13.5px] font-semibold"
-                style={{ color: "var(--text-faint)" }}
+                style={{ color: 'var(--text-faint)' }}
               >
                 <Icon name="repost" size={20} stroke={1.9} />
               </button>
@@ -236,7 +246,7 @@ export function PostCard({
               <button
                 onClick={(e) => e.stopPropagation()}
                 className="flex items-center gap-1.5 px-0.5 py-1 rounded-full"
-                style={{ color: "var(--text-faint)" }}
+                style={{ color: 'var(--text-faint)' }}
               >
                 <Icon name="bookmark" size={20} stroke={1.9} />
               </button>
