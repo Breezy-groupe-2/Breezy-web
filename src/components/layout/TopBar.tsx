@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BreezyLogo, Avatar } from "@/components/ui";
+import { BreezyLogo, Avatar, Icon } from "@/components/ui";
 import { useAuth } from "@/hooks/use-auth";
 
 export function TopBar() {
@@ -36,6 +36,17 @@ export function TopBar() {
       <Link href="/home">
         <BreezyLogo size={20} />
       </Link>
+
+      <div className="flex items-center gap-2 ml-auto">
+        {user?.isAdmin && (
+          <Link
+            href="/admin"
+            className="w-9 h-9 flex items-center justify-center rounded-full"
+            style={{ background: "var(--primary-soft)" }}
+          >
+            <Icon name="shieldFill" size={18} color="var(--primary)" stroke={2} />
+          </Link>
+        )}
 
       <div className="relative" ref={menuRef}>
         <button onClick={() => setMenuOpen((o) => !o)} className="cursor-pointer">
@@ -77,6 +88,7 @@ export function TopBar() {
             </button>
           </div>
         )}
+      </div>
       </div>
     </header>
   );

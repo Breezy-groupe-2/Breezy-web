@@ -1,3 +1,5 @@
+export type UserStatus = "active" | "suspended" | "banned";
+
 export interface User {
   id: number;
   username: string;
@@ -8,6 +10,8 @@ export interface User {
   followersCount: number;
   followingCount: number;
   createdAt: string;
+  status?: UserStatus;
+  isAdmin?: boolean;
 }
 
 export interface Post {
@@ -56,6 +60,19 @@ export interface Notification {
   postId?: number;
   read: boolean;
   createdAt: string;
+}
+
+export type ReportReason = "Spam" | "Harcèlement" | "Contenu inapproprié" | "Désinformation";
+
+export interface Report {
+  id: string;
+  kind: "post" | "comment";
+  authorUsername: string;
+  reason: ReportReason;
+  count: number;
+  time: string;
+  text: string;
+  onPostAuthorUsername?: string;
 }
 
 export interface AuthResponse {

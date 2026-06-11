@@ -188,12 +188,36 @@ export default function ProfilePage() {
         </div>
 
         <div className="mt-3">
-          <h1
-            className="font-display font-extrabold text-[22px] tracking-tight"
-            style={{ color: "var(--text)", letterSpacing: "-0.01em" }}
-          >
-            {profile.displayName}
-          </h1>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1
+              className="font-display font-extrabold text-[22px] tracking-tight"
+              style={{ color: "var(--text)", letterSpacing: "-0.01em" }}
+            >
+              {profile.displayName}
+            </h1>
+            {profile.status === "suspended" && (
+              <span
+                className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+                style={{
+                  background: "color-mix(in oklch, oklch(0.78 0.13 90) 18%, transparent)",
+                  color: "oklch(0.78 0.13 90)",
+                }}
+              >
+                Suspendu
+              </span>
+            )}
+            {profile.status === "banned" && (
+              <span
+                className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+                style={{
+                  background: "color-mix(in oklch, var(--like) 18%, transparent)",
+                  color: "var(--like)",
+                }}
+              >
+                Banni
+              </span>
+            )}
+          </div>
           <p className="text-[14.5px] mt-0.5" style={{ color: "var(--text-faint)" }}>
             @{profile.username}
           </p>

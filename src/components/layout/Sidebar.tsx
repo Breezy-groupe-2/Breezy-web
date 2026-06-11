@@ -75,6 +75,20 @@ export function Sidebar() {
             </Link>
           );
         })}
+        {user?.isAdmin && (
+          <Link
+            href="/admin"
+            className="flex items-center gap-3 px-3 py-3 rounded-[14px] text-[16px] transition-colors"
+            style={{
+              color: pathname.startsWith("/admin") ? "var(--primary)" : "var(--text)",
+              background: pathname.startsWith("/admin") ? "var(--primary-soft)" : "transparent",
+              fontWeight: pathname.startsWith("/admin") ? 700 : 500,
+            }}
+          >
+            <Icon name="shield" size={22} color={pathname.startsWith("/admin") ? "var(--primary)" : "var(--text)"} />
+            Modération
+          </Link>
+        )}
       </nav>
 
       <button
