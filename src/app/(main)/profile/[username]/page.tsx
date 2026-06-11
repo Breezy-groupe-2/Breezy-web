@@ -6,7 +6,7 @@ import { Avatar, Icon } from "@/components/ui";
 import { PostCard } from "@/features/posts/PostCard";
 import { getProfile, updateProfile } from "@/features/profile/profile.api";
 import { getUserPosts, likePost, unlikePost } from "@/features/posts/posts.api";
-import { followUser, unfollowUser } from "@/features/users/users.api";
+import { followUser, unfollowUser, getFollowers, getFollowing } from "@/features/users/users.api";
 import { useAuth } from "@/hooks/use-auth";
 import type { User, Post } from "@/types";
 
@@ -28,6 +28,10 @@ export default function ProfilePage() {
   const [editOpen, setEditOpen] = useState(false);
   const [editName, setEditName] = useState("");
   const [editBio, setEditBio] = useState("");
+  const [userListMode, setUserListMode] = useState<"followers" | "following" | null>(null);
+  const [userList, setUserList] = useState<User[]>([]);
+  const [userListLoading, setUserListLoading] = useState(false);
+  const [userListSearch, setUserListSearch] = useState("");
 
   useEffect(() => {
     if (!resolvedUsername) return;
@@ -87,6 +91,18 @@ export default function ProfilePage() {
     const updated = await updateProfile({ displayName: editName, bio: editBio });
     setProfile(updated);
     setEditOpen(false);
+  }
+
+  async function openUserList(mode: "followers" | "following") {
+    setUserListMode(mode);
+    setUserListSearch("");
+    setUserListLoading(true);
+    try {
+      const list = await (mode === "followers" ? getFollowers : getFollowing)(resolvedUsername);
+      setUserList(list);
+    } finally {
+      setUserListLoading(false);
+    }
   }
 
   if (loading || !profile) {
@@ -206,24 +222,26 @@ export default function ProfilePage() {
             </p>
           )}
           <div className="flex gap-5 mt-3">
-            <span className="text-[14px]" style={{ color: "var(--text-muted)" }}>
-              <b
-                className="font-display font-bold"
-                style={{ color: "var(--text)" }}
-              >
+            <button
+              onClick={() => openUserList("following")}
+              className="text-[14px] text-left"
+              style={{ color: "var(--text-muted)" }}
+            >
+              <b className="font-display font-bold" style={{ color: "var(--text)" }}>
                 {profile.followingCount.toLocaleString("fr")}
               </b>{" "}
               abonnements
-            </span>
-            <span className="text-[14px]" style={{ color: "var(--text-muted)" }}>
-              <b
-                className="font-display font-bold"
-                style={{ color: "var(--text)" }}
-              >
+            </button>
+            <button
+              onClick={() => openUserList("followers")}
+              className="text-[14px] text-left"
+              style={{ color: "var(--text-muted)" }}
+            >
+              <b className="font-display font-bold" style={{ color: "var(--text)" }}>
                 {profile.followersCount.toLocaleString("fr")}
               </b>{" "}
               abonnés
-            </span>
+            </button>
           </div>
         </div>
 
@@ -264,6 +282,105 @@ export default function ProfilePage() {
           </p>
         )}
       </div>
+
+      {/* Followers / Following sheet */}
+      {userListMode && (
+        <div className="fixed inset-0 z-[60] flex flex-col justify-end">
+          <div
+            className="absolute inset-0"
+            style={{ background: "rgba(20,16,40,0.45)" }}
+            onClick={() => setUserListMode(null)}
+          />
+          <div
+            className="relative flex flex-col"
+            style={{
+              background: "var(--bg)",
+              borderTopLeftRadius: 30,
+              borderTopRightRadius: 30,
+              maxHeight: "75vh",
+              animation: "b-sheet-in 0.32s cubic-bezier(.3,.8,.3,1) both",
+            }}
+          >
+            <div className="w-10 h-1.5 rounded-full mx-auto mt-2.5 shrink-0" style={{ background: "var(--border)" }} />
+            <div className="flex items-center justify-between px-5 py-3 shrink-0">
+              <span className="font-display font-bold text-[17px]" style={{ color: "var(--text)" }}>
+                {userListMode === "followers" ? "Abonnés" : "Abonnements"}
+              </span>
+              <button onClick={() => setUserListMode(null)}>
+                <Icon name="close" size={22} color="var(--text-muted)" />
+              </button>
+            </div>
+
+            {/* Search bar */}
+            <div className="px-4 pb-3 shrink-0">
+              <div
+                className="flex items-center gap-2 px-4 h-[42px] rounded-full"
+                style={{ background: "var(--surface)", border: "1.5px solid var(--border)" }}
+              >
+                <Icon name="search" size={16} color="var(--text-faint)" />
+                <input
+                  autoFocus
+                  value={userListSearch}
+                  onChange={(e) => setUserListSearch(e.target.value)}
+                  placeholder="Rechercher…"
+                  className="flex-1 bg-transparent border-none outline-none text-[14px]"
+                  style={{ color: "var(--text)" }}
+                />
+                {userListSearch && (
+                  <button onClick={() => setUserListSearch("")}>
+                    <Icon name="close" size={14} color="var(--text-faint)" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="overflow-y-auto pb-10 px-4 flex flex-col gap-1">
+              {userListLoading ? (
+                <div className="flex justify-center py-10">
+                  <span className="w-7 h-7 rounded-full border-[3px] border-primary border-t-transparent animate-spin block" />
+                </div>
+              ) : (() => {
+                const q = userListSearch.toLowerCase();
+                const filtered = q
+                  ? userList.filter(
+                      (u) =>
+                        u.displayName.toLowerCase().includes(q) ||
+                        u.username.toLowerCase().includes(q)
+                    )
+                  : userList;
+                return filtered.length === 0 ? (
+                  <p className="text-center text-[14px] py-10" style={{ color: "var(--text-faint)" }}>
+                    {userListSearch ? "Aucun résultat." : "Aucun utilisateur pour l'instant."}
+                  </p>
+                ) : filtered.map((u) => (
+                  <button
+                    key={u.id}
+                    onClick={() => { setUserListMode(null); router.push(`/profile/${u.username}`); }}
+                    className="flex items-center gap-3 w-full px-3 py-3 rounded-[14px] transition-colors text-left"
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <Avatar displayName={u.displayName} src={u.avatarUrl} size={44} />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-[15px] truncate" style={{ color: "var(--text)" }}>
+                        {u.displayName}
+                      </p>
+                      <p className="text-[13px] truncate" style={{ color: "var(--text-faint)" }}>
+                        @{u.username}
+                      </p>
+                      {u.bio && (
+                        <p className="text-[13px] truncate mt-0.5" style={{ color: "var(--text-muted)" }}>
+                          {u.bio}
+                        </p>
+                      )}
+                    </div>
+                  </button>
+                ));
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit profile sheet */}
       {editOpen && (
