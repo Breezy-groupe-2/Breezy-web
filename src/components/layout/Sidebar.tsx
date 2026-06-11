@@ -15,10 +15,11 @@ const NAV_ITEMS: {
   icon: IconName;
   iconFill?: IconName;
 }[] = [
-  { href: "/home",       label: "Accueil",    icon: "home",   iconFill: "homeFill" },
+  { href: "/home",       label: "Accueil",    icon: "home",     iconFill: "homeFill" },
   { href: "/search",     label: "Découvrir",  icon: "search" },
-  { href: "/activity",   label: "Activité",   icon: "bell",   iconFill: "bellFill" },
+  { href: "/activity",   label: "Activité",   icon: "bell",     iconFill: "bellFill" },
   { href: "/profile/me", label: "Profil",     icon: "user" },
+  { href: "/settings",   label: "Paramètres", icon: "settings" },
 ];
 
 export function Sidebar() {
