@@ -20,6 +20,11 @@ export const handlers = [
     return HttpResponse.json({ token: "mock-jwt-token", user: MOCK_ME });
   }),
 
+  http.post(`${BASE}/api/v1/auth/google`, async () => {
+    await delay(600);
+    return HttpResponse.json({ token: "mock-jwt-token", user: MOCK_ME });
+  }),
+
   // ── Current user ──────────────────────────────────────────────────────────
 
   http.get(`${BASE}/api/v1/users/me`, async () => {
