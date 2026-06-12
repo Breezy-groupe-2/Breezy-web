@@ -75,6 +75,23 @@ export const handlers = [
     return HttpResponse.json(post);
   }),
 
+  http.patch(`${BASE}/api/v1/posts/:id`, async ({ request, params }) => {
+    await delay(250);
+    const body = (await request.json()) as { content: string };
+    posts = posts.map((p) =>
+      p.id === Number(params.id) ? { ...p, content: body.content } : p
+    );
+    const updated = posts.find((p) => p.id === Number(params.id));
+    if (!updated) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json(updated);
+  }),
+
+  http.delete(`${BASE}/api/v1/posts/:id`, async ({ params }) => {
+    await delay(200);
+    posts = posts.filter((p) => p.id !== Number(params.id));
+    return new HttpResponse(null, { status: 204 });
+  }),
+
   // ── Likes ─────────────────────────────────────────────────────────────────
 
   http.post(`${BASE}/api/v1/posts/:id/likes`, async ({ params }) => {

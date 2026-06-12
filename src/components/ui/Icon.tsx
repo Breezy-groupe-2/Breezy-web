@@ -4,7 +4,7 @@ export type IconName =
   | "bookmark" | "feather" | "plus" | "back" | "close"
   | "more" | "user" | "sun" | "moon" | "settings"
   | "image" | "edit" | "send" | "check" | "gust"
-  | "eye" | "eyeOff" | "lock" | "mail";
+  | "eye" | "eyeOff" | "lock" | "mail" | "trash";
 
 interface IconProps {
   name: IconName;
@@ -147,6 +147,12 @@ export function Icon({
       <>
         <rect x="3.5" y="5.5" width="17" height="13" rx="2.5" />
         <path d="m4.5 7.5 7.5 5 7.5-5" />
+      </>
+    ),
+    trash: (
+      <>
+        <path d="M4.5 7h15M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12" />
+        <path d="M10 11v5M14 11v5" />
       </>
     ),
   };
