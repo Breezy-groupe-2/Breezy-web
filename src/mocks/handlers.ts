@@ -1,40 +1,80 @@
 import { http, HttpResponse, delay } from "msw";
 import { MOCK_ME, MOCK_POSTS, MOCK_USERS, MOCK_COMMENTS } from "./data";
-import type { Post, Comment } from "@/types";
+import type { Post, Comment, User } from "@/types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
 let posts: Post[] = [...MOCK_POSTS];
 let comments: Comment[] = [...MOCK_COMMENTS];
+let users: User[] = [...MOCK_USERS, MOCK_ME];
+
+function buildToken(username: string) {
+  return `mock-jwt-token:${username}`;
+}
+
+function currentUsername(request: Request) {
+  const raw = request.headers.get("authorization");
+  if (!raw) return null;
+  const token = raw.replace(/^Bearer\s+/i, "");
+  const match = token.match(/^mock-jwt-token:(.+)$/);
+  return match?.[1] ?? null;
+}
+
+function findUserByLogin(email?: string, username?: string) {
+  return (
+    users.find((u) => u.email === email || u.username === username || u.username === email) ??
+    null
+  );
+}
 
 export const handlers = [
   // ── Auth ──────────────────────────────────────────────────────────────────
 
-  http.post(`${BASE}/api/v1/auth/login`, async () => {
+  http.post(`${BASE}/api/v1/auth/login`, async ({ request }) => {
     await delay(400);
-    return HttpResponse.json({ token: "mock-jwt-token", user: MOCK_ME });
+    const body = (await request.json()) as { email?: string; password?: string };
+    const user = findUserByLogin(body.email) ?? MOCK_ME;
+    return HttpResponse.json({ token: buildToken(user.username), user });
   }),
 
-  http.post(`${BASE}/api/v1/auth/register`, async () => {
+  http.post(`${BASE}/api/v1/auth/register`, async ({ request }) => {
     await delay(500);
-    return HttpResponse.json({ token: "mock-jwt-token", user: MOCK_ME });
+    const body = (await request.json()) as { email?: string; password?: string; username?: string };
+    const username = body.username?.trim() || `user-${Date.now()}`;
+    const user: User = {
+      id: Date.now(),
+      username,
+      displayName: username,
+      email: body.email ?? `${username}@example.com`,
+      bio: "",
+      avatarUrl: `https://i.pravatar.cc/150?u=${encodeURIComponent(username)}`,
+      followersCount: 0,
+      followingCount: 0,
+      createdAt: new Date().toISOString(),
+      status: "active",
+    };
+    users = [...users, user];
+    return HttpResponse.json({ token: buildToken(user.username), user });
   }),
 
   http.post(`${BASE}/api/v1/auth/google`, async () => {
     await delay(600);
-    return HttpResponse.json({ token: "mock-jwt-token", user: MOCK_ME });
+    return HttpResponse.json({ token: buildToken(MOCK_ME.username), user: MOCK_ME });
   }),
 
   // ── Current user ──────────────────────────────────────────────────────────
 
-  http.get(`${BASE}/api/v1/users/me`, async () => {
+  http.get(`${BASE}/api/v1/users/me`, async ({ request }) => {
     await delay(200);
-    return HttpResponse.json(MOCK_ME);
+    const username = currentUsername(request);
+    const user = username ? users.find((u) => u.username === username) : null;
+    if (!user) return new HttpResponse(null, { status: 401 });
+    return HttpResponse.json(user);
   }),
 
   http.get(`${BASE}/api/v1/users/:username`, async ({ params }) => {
     await delay(200);
-    const user = [...MOCK_USERS, MOCK_ME].find((u) => u.username === params.username);
+    const user = users.find((u) => u.username === params.username);
     if (!user) return new HttpResponse(null, { status: 404 });
     return HttpResponse.json(user);
   }),
@@ -149,8 +189,14 @@ export const handlers = [
 
   http.patch(`${BASE}/api/v1/users/me`, async ({ request }) => {
     await delay(300);
+    const username = currentUsername(request);
+    if (!username) return new HttpResponse(null, { status: 401 });
     const body = (await request.json()) as Partial<typeof MOCK_ME>;
-    return HttpResponse.json({ ...MOCK_ME, ...body });
+    const updated = users.find((u) => u.username === username);
+    if (!updated) return new HttpResponse(null, { status: 404 });
+    const next = { ...updated, ...body };
+    users = users.map((u) => (u.username === username ? next : u));
+    return HttpResponse.json(next);
   }),
 
   // ── Follow ────────────────────────────────────────────────────────────────
@@ -169,17 +215,17 @@ export const handlers = [
 
   http.get(`${BASE}/api/v1/users/:username/followers`, async ({ params }) => {
     await delay(200);
-    const user = [...MOCK_USERS, MOCK_ME].find((u) => u.username === params.username);
+    const user = users.find((u) => u.username === params.username);
     const count = user?.followersCount ?? 0;
-    const list = MOCK_USERS.slice(0, Math.min(count, MOCK_USERS.length));
+    const list = users.slice(0, Math.min(count, users.length));
     return HttpResponse.json({ data: list, total: list.length, page: 1, limit: 20, hasMore: false });
   }),
 
   http.get(`${BASE}/api/v1/users/:username/following`, async ({ params }) => {
     await delay(200);
-    const user = [...MOCK_USERS, MOCK_ME].find((u) => u.username === params.username);
+    const user = users.find((u) => u.username === params.username);
     const count = user?.followingCount ?? 0;
-    const list = MOCK_USERS.slice(0, Math.min(count, MOCK_USERS.length));
+    const list = users.slice(0, Math.min(count, users.length));
     return HttpResponse.json({ data: list, total: list.length, page: 1, limit: 20, hasMore: false });
   }),
 

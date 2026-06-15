@@ -55,6 +55,7 @@ export const MOCK_USERS: User[] = [
     followersCount: 2100,
     followingCount: 430,
     createdAt: "2025-04-01T08:00:00Z",
+    status: "suspended",
   },
   {
     id: 6,
@@ -66,6 +67,7 @@ export const MOCK_USERS: User[] = [
     followersCount: 640,
     followingCount: 180,
     createdAt: "2025-05-12T10:00:00Z",
+    status: "banned",
   },
 ];
 
@@ -79,6 +81,7 @@ export const MOCK_ME: User = {
   followersCount: 128,
   followingCount: 74,
   createdAt: "2025-06-01T00:00:00Z",
+  status: "active",
 };
 
 export const MOCK_POSTS: Post[] = [

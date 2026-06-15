@@ -95,17 +95,11 @@ export default function HomePage() {
   }
 
   function handleDelete(id: number) {
-    const snapshot = posts.find((p) => p.id === id);
-    const snapshotIdx = posts.findIndex((p) => p.id === id);
     setPosts((prev) => prev.filter((p) => p.id !== id));
     deletePost(id).catch(() => {
-      if (snapshot) {
-        setPosts((prev) => {
-          const next = [...prev];
-          next.splice(snapshotIdx, 0, snapshot);
-          return next;
-        });
-      }
+      getFeed()
+        .then(setPosts)
+        .catch(() => {});
     });
   }
 

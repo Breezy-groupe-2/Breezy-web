@@ -1,3 +1,5 @@
+export type UserStatus = "active" | "suspended" | "banned";
+
 export interface User {
   id: number;
   username: string;
@@ -8,6 +10,8 @@ export interface User {
   followersCount: number;
   followingCount: number;
   createdAt: string;
+  status?: UserStatus;
+  isAdmin?: boolean;
 }
 
 export interface Post {
