@@ -15,7 +15,7 @@ export function AuthGuard({ children }: { children: ReactNode }) {
       router.replace('/login');
       return;
     }
-    if (user?.status === 'suspended') {
+    if (user?.status === 'suspended' || user?.status === 'banned') {
       router.replace('/suspended');
     }
   }, [isLoading, token, user, router]);
@@ -31,7 +31,7 @@ export function AuthGuard({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!token || user?.status === 'suspended') return null;
+  if (!token || user?.status === 'suspended' || user?.status === 'banned') return null;
 
   return <>{children}</>;
 }

@@ -4,9 +4,27 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { Icon } from "@/components/ui";
 
+const CONTENT = {
+  suspended: {
+    icon: "lock" as const,
+    hue: 25,
+    title: "Compte suspendu",
+    body: "Ton compte a été temporairement suspendu par un administrateur. Contacte le support si tu penses qu’il s’agit d’une erreur.",
+  },
+  banned: {
+    icon: "ban" as const,
+    hue: 25,
+    title: "Compte banni",
+    body: "Ton compte a été définitivement banni de Breezy. Contacte le support si tu penses qu’il s’agit d’une erreur.",
+  },
+};
+
 export default function SuspendedPage() {
   const router = useRouter();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+
+  const status = user?.status === "banned" ? "banned" : "suspended";
+  const { icon, hue, title, body } = CONTENT[status];
 
   function handleLogout() {
     logout();
@@ -20,18 +38,18 @@ export default function SuspendedPage() {
     >
       <div
         className="flex items-center justify-center w-16 h-16 rounded-full mb-6"
-        style={{ background: "color-mix(in oklch, var(--like) 15%, transparent)" }}
+        style={{ background: `oklch(0.94 0.05 ${hue})` }}
       >
-        <Icon name="lock" size={28} color="var(--like)" />
+        <Icon name={icon} size={28} color={`oklch(0.55 0.18 ${hue})`} />
       </div>
       <h1
         className="font-display font-extrabold text-[26px] mb-2"
         style={{ color: "var(--text)", letterSpacing: "-0.02em" }}
       >
-        Compte suspendu
+        {title}
       </h1>
       <p className="text-[15px] max-w-[340px] mb-8" style={{ color: "var(--text-muted)" }}>
-        Ton compte a été suspendu par un administrateur. Contacte le support si tu penses qu&apos;il s&apos;agit d&apos;une erreur.
+        {body}
       </p>
       <button
         onClick={handleLogout}
