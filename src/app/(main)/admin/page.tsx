@@ -9,8 +9,7 @@ import {
   getModAccounts, setAccountStatus,
 } from "@/features/admin/admin.api";
 import { useAuth } from "@/hooks/use-auth";
-import type { Report, UserStatus } from "@/types";
-import { MOCK_USERS, MOCK_ME } from "@/mocks/data";
+import type { ModAccount, Report, UserStatus } from "@/types";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -29,10 +28,6 @@ const STATUS_TONE: Record<UserStatus, { h: number; label: string }> = {
   suspended: { h: 70,  label: "Suspendu" },
   banned:    { h: 25,  label: "Banni" },
 };
-
-function getUserByUsername(username: string) {
-  return [...MOCK_USERS, MOCK_ME].find((u) => u.username === username);
-}
 
 function modBtn(variant: "ghost" | "warn" | "danger" | "soft") {
   const base: React.CSSProperties = {
@@ -119,8 +114,6 @@ function ReportCard({
   report: Report;
   onResolve: (id: string, action: "dismiss" | "delete" | "suspend", msg: string) => void;
 }) {
-  const author = getUserByUsername(report.authorUsername);
-  const onPostAuthor = report.onPostAuthorUsername ? getUserByUsername(report.onPostAuthorUsername) : null;
   const [busy, setBusy] = useState<string | null>(null);
 
   function act(action: "dismiss" | "delete" | "suspend", msg: string) {
@@ -158,22 +151,20 @@ function ReportCard({
       {/* content */}
       <div className="px-4 py-3.5">
         <div className="flex items-center gap-2.5 mb-2.5">
-          {author && (
-            <Link href={`/profile/${author.username}`}>
-              <Avatar displayName={author.displayName} src={author.avatarUrl} size={34} />
-            </Link>
-          )}
+          <Link href={`/profile/${report.author.username}`}>
+            <Avatar displayName={report.author.displayName} src={report.author.avatarUrl} size={34} />
+          </Link>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="font-display font-bold text-[14px]" style={{ color: "var(--text)" }}>
-                {author?.displayName ?? report.authorUsername}
+                {report.author.displayName}
               </span>
               <span className="text-[12.5px]" style={{ color: "var(--text-faint)" }}>
-                @{report.authorUsername}
+                @{report.author.username}
               </span>
-              {report.kind === "comment" && onPostAuthor && (
+              {report.kind === "comment" && report.onPostAuthor && (
                 <span className="text-[12px]" style={{ color: "var(--text-faint)" }}>
-                  · en réponse à @{onPostAuthor.username}
+                  · en réponse à @{report.onPostAuthor.username}
                 </span>
               )}
             </div>
@@ -200,11 +191,11 @@ function ReportCard({
           <button onClick={() => act("delete", "Contenu supprimé")} style={modBtn("warn")}>
             <Icon name="trash" size={15} /> Supprimer
           </button>
-          <button onClick={() => act("suspend", `@${report.authorUsername} suspendu·e`)} style={modBtn("danger")}>
+          <button onClick={() => act("suspend", `@${report.author.username} suspendu·e`)} style={modBtn("danger")}>
             <Icon name="pause" size={15} /> Suspendre
           </button>
           <Link
-            href={`/profile/${report.authorUsername}`}
+            href={`/profile/${report.author.username}`}
             className="hidden md:inline-flex items-center gap-1.5 ml-auto"
             style={{ ...modBtn("ghost"), flex: "none" }}
           >
@@ -217,28 +208,25 @@ function ReportCard({
 }
 
 function AccountRow({
-  username, status, reportCount,
-  onSetStatus,
+  account, reportCount, onSetStatus,
 }: {
-  username: string;
-  status: UserStatus;
+  account: ModAccount;
   reportCount: number;
   onSetStatus: (username: string, status: UserStatus) => void;
 }) {
-  const user = getUserByUsername(username);
-  if (!user) return null;
+  const { username, displayName, avatarUrl, status } = account;
   return (
     <div
       className="flex items-center gap-3 px-4 py-3 rounded-[18px]"
       style={{ background: "var(--surface)", boxShadow: "var(--card-shadow)" }}
     >
       <Link href={`/profile/${username}`}>
-        <Avatar displayName={user.displayName} src={user.avatarUrl} size={44} />
+        <Avatar displayName={displayName} src={avatarUrl} size={44} />
       </Link>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-display font-bold text-[14.5px] truncate" style={{ color: "var(--text)" }}>
-            {user.displayName}
+            {displayName}
           </span>
           <StatusPill status={status} />
         </div>
@@ -280,7 +268,7 @@ export default function AdminPage() {
 
   const [tab, setTab] = useState<Tab>("reports");
   const [reports, setReports] = useState<Report[]>([]);
-  const [accounts, setAccounts] = useState<Record<string, UserStatus>>({});
+  const [accounts, setAccounts] = useState<ModAccount[]>([]);
   const [acctFilter, setAcctFilter] = useState<AcctFilter>("all");
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
@@ -299,8 +287,10 @@ export default function AdminPage() {
     if (action === "suspend") {
       const report = reports.find((r) => r.id === id);
       if (report) {
-        setAccounts((prev) => ({ ...prev, [report.authorUsername]: "suspended" }));
-        setAccountStatus(report.authorUsername, "suspended").catch(() => {});
+        setAccounts((prev) =>
+          prev.map((a) => a.username === report.author.username ? { ...a, status: "suspended" } : a)
+        );
+        setAccountStatus(report.author.username, "suspended").catch(() => {});
       }
     }
     setReports((prev) => prev.filter((r) => r.id !== id));
@@ -310,9 +300,12 @@ export default function AdminPage() {
   }
 
   function handleSetStatus(username: string, status: UserStatus) {
-    setAccounts((prev) => ({ ...prev, [username]: status }));
+    const previousStatus = accounts.find((a) => a.username === username)?.status;
+    setAccounts((prev) => prev.map((a) => a.username === username ? { ...a, status } : a));
     setAccountStatus(username, status).catch(() => {
-      setAccounts((prev) => ({ ...prev, [username]: accounts[username] }));
+      if (previousStatus !== undefined) {
+        setAccounts((prev) => prev.map((a) => a.username === username ? { ...a, status: previousStatus } : a));
+      }
     });
     flash(
       status === "active" ? "Compte réactivé ✨" :
@@ -322,16 +315,17 @@ export default function AdminPage() {
 
   if (!me?.isAdmin) return null;
 
-  const counts = Object.values(accounts);
-  const nActive = counts.filter((s) => s === "active").length;
-  const nSusp = counts.filter((s) => s === "suspended").length;
-  const nBan = counts.filter((s) => s === "banned").length;
+  const nActive = accounts.filter((a) => a.status === "active").length;
+  const nSusp = accounts.filter((a) => a.status === "suspended").length;
+  const nBan = accounts.filter((a) => a.status === "banned").length;
 
   const reportCountByUser: Record<string, number> = {};
-  reports.forEach((r) => { reportCountByUser[r.authorUsername] = (reportCountByUser[r.authorUsername] ?? 0) + r.count; });
+  reports.forEach((r) => {
+    reportCountByUser[r.author.username] = (reportCountByUser[r.author.username] ?? 0) + r.count;
+  });
 
-  const acctList = Object.entries(accounts).filter(
-    ([, st]) => acctFilter === "all" || st === acctFilter
+  const acctList = accounts.filter(
+    (a) => acctFilter === "all" || a.status === acctFilter
   );
 
   return (
@@ -487,12 +481,11 @@ export default function AdminPage() {
                   ))}
                 </div>
                 <div className="flex flex-col gap-2.5">
-                  {acctList.map(([username, status]) => (
+                  {acctList.map((account) => (
                     <AccountRow
-                      key={username}
-                      username={username}
-                      status={status}
-                      reportCount={reportCountByUser[username] ?? 0}
+                      key={account.username}
+                      account={account}
+                      reportCount={reportCountByUser[account.username] ?? 0}
                       onSetStatus={handleSetStatus}
                     />
                   ))}

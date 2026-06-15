@@ -1,4 +1,4 @@
-import type { User, Post, Comment, Report, UserStatus } from "@/types";
+import type { User, Post, Comment, Report, ModAccount } from "@/types";
 
 export const MOCK_USERS: User[] = [
   {
@@ -119,36 +119,46 @@ export const MOCK_USERS: User[] = [
   },
 ];
 
+function userRef(username: string) {
+  const u = MOCK_USERS.find((x) => x.username === username)!;
+  return { username: u.username, displayName: u.displayName, avatarUrl: u.avatarUrl };
+}
+
 export const MOCK_REPORTS: Report[] = [
   {
-    id: "rp1", kind: "post", authorUsername: "hugo",
+    id: "rp1", kind: "post",
+    author: userRef("hugo"),
     reason: "Spam", count: 4, time: "il y a 2 h",
     text: "GAGNE 500€/JOUR depuis chez toi 💸💸 clique sur mon lien en bio, places limitées !!!",
   },
   {
-    id: "rp2", kind: "comment", authorUsername: "ines",
+    id: "rp2", kind: "comment",
+    author: userRef("ines"),
     reason: "Harcèlement", count: 7, time: "il y a 4 h",
     text: "franchement t'es nul, arrête de poster, personne te lit de toute façon.",
-    onPostAuthorUsername: "theo",
+    onPostAuthor: userRef("theo"),
   },
   {
-    id: "rp3", kind: "post", authorUsername: "yann",
+    id: "rp3", kind: "post",
+    author: userRef("yann"),
     reason: "Contenu inapproprié", count: 2, time: "il y a 6 h",
     text: "lien sketch que je devrais pas partager mais bon… (contenu modéré pour l'exemple)",
   },
   {
-    id: "rp4", kind: "comment", authorUsername: "noahcode",
+    id: "rp4", kind: "comment",
+    author: userRef("noahcode"),
     reason: "Désinformation", count: 3, time: "hier",
     text: "source : « mon cousin l'a dit ». donc c'est forcément vrai, arrêtez de vérifier.",
-    onPostAuthorUsername: "mae",
+    onPostAuthor: userRef("mae"),
   },
 ];
 
-export const MOCK_MOD_ACCOUNTS: Record<string, UserStatus> = {
-  mae: "active", "lina.k": "active", jade: "active", noahcode: "active",
-  sofia: "suspended", samuel: "banned", hugo: "active", ines: "active",
-  yann: "active", theo: "active",
-};
+export const MOCK_MOD_ACCOUNTS: ModAccount[] = MOCK_USERS.map((u) => ({
+  username: u.username,
+  displayName: u.displayName,
+  avatarUrl: u.avatarUrl,
+  status: u.status ?? "active",
+}));
 
 export const MOCK_ME: User = {
   id: 0,
