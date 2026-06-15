@@ -1,6 +1,6 @@
 import { http, HttpResponse, delay } from "msw";
 import { MOCK_ME, MOCK_POSTS, MOCK_USERS, MOCK_COMMENTS, MOCK_REPORTS, MOCK_MOD_ACCOUNTS } from "./data";
-import type { Post, Comment, User, UserStatus, Report } from "@/types";
+import type { Post, Comment, User, ModAccount, Report } from "@/types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
@@ -8,7 +8,7 @@ let posts: Post[] = [...MOCK_POSTS];
 let comments: Comment[] = [...MOCK_COMMENTS];
 let users: User[] = [...MOCK_USERS, MOCK_ME];
 let reports: Report[] = [...MOCK_REPORTS];
-let modAccounts: Record<string, UserStatus> = { ...MOCK_MOD_ACCOUNTS };
+let modAccounts: ModAccount[] = [...MOCK_MOD_ACCOUNTS];
 
 function buildToken(username: string) {
   return `mock-jwt-token:${username}`;
@@ -271,9 +271,11 @@ export const handlers = [
 
   http.patch(`${BASE}/api/moderation/accounts/:username`, async ({ params, request }) => {
     await delay(250);
-    const body = (await request.json()) as { status: UserStatus };
-    modAccounts = { ...modAccounts, [params.username as string]: body.status };
-    reports = reports.filter((r) => r.authorUsername !== params.username);
-    return HttpResponse.json({ username: params.username, status: body.status });
+    const body = (await request.json()) as { status: ModAccount["status"] };
+    modAccounts = modAccounts.map((a) =>
+      a.username === params.username ? { ...a, status: body.status } : a
+    );
+    reports = reports.filter((r) => r.author.username !== params.username);
+    return HttpResponse.json(modAccounts.find((a) => a.username === params.username));
   }),
 ];
