@@ -42,8 +42,6 @@ export default function PostDetailPage() {
 
   useEffect(() => {
     if (!id) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true);
     Promise.all([getPost(Number(id)), getComments(Number(id))])
       .then(([p, c]) => {
         setPost(p);

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BreezyLogo } from "@/components/ui";
 import { useAuth } from "@/hooks/use-auth";
 import { loginUser } from "./auth.api";
-import { isAxiosError } from "axios";
+import { isAxiosError } from "@/lib/axios";
 
 const GoogleIcon = () => (
   <svg viewBox="0 0 48 48" className="size-[18px] shrink-0">
@@ -26,7 +26,7 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setIsLoading(true);

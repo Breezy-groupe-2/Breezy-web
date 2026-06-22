@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { Avatar, Icon } from "@/components/ui";
 import { useCompose } from "@/store/compose-context";
 import { useAuth } from "@/hooks/use-auth";
@@ -15,15 +15,12 @@ export function ComposeSheet() {
   const [loading, setLoading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
-    if (isOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setText("");
-      setTimeout(() => textareaRef.current?.focus(), 80);
-    }
-  }, [isOpen]);
-
   if (!isOpen) return null;
+
+  function handleClose() {
+    setText("");
+    closeCompose();
+  }
 
   const remaining = MAX - text.length;
   const over = remaining < 0;
@@ -52,7 +49,7 @@ export function ComposeSheet() {
       <div
         className="absolute inset-0"
         style={{ background: "rgba(20,16,40,0.45)" }}
-        onClick={closeCompose}
+        onClick={handleClose}
       />
 
       {/* Sheet */}
@@ -72,7 +69,7 @@ export function ComposeSheet() {
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-2.5">
           <button
-            onClick={closeCompose}
+            onClick={handleClose}
             className="text-[15.5px] font-bold"
             style={{ color: "var(--text-muted)" }}
           >
@@ -92,6 +89,7 @@ export function ComposeSheet() {
           {user && <Avatar displayName={user.displayName} src={user.avatarUrl} size={44} />}
           <textarea
             ref={textareaRef}
+            autoFocus
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Quoi de neuf dans ta brise ?"

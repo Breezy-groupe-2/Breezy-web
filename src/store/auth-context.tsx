@@ -42,6 +42,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
   }, []);
 
+  useEffect(() => {
+    function onStorage(e: StorageEvent) {
+      if (e.key !== "breezy_token") return;
+      if (!e.newValue) {
+        setState({ user: null, token: null, isLoading: false });
+      }
+    }
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
   const login = useCallback((token: string, user: User) => {
     setToken(token);
     setState({ user, token, isLoading: false });

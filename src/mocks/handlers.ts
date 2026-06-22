@@ -247,29 +247,29 @@ export const handlers = [
 
   // ── Admin ─────────────────────────────────────────────────────────────────
 
-  http.get(`${BASE}/api/moderation/reports`, async () => {
+  http.get(`${BASE}/api/v1/moderation/reports`, async () => {
     await delay(300);
     return HttpResponse.json(reports);
   }),
 
-  http.post(`${BASE}/api/moderation/reports/:id/dismiss`, async ({ params }) => {
+  http.post(`${BASE}/api/v1/moderation/reports/:id/dismiss`, async ({ params }) => {
     await delay(250);
     reports = reports.filter((r) => r.id !== params.id);
     return new HttpResponse(null, { status: 204 });
   }),
 
-  http.delete(`${BASE}/api/moderation/content/:reportId`, async ({ params }) => {
+  http.delete(`${BASE}/api/v1/moderation/content/:reportId`, async ({ params }) => {
     await delay(250);
     reports = reports.filter((r) => r.id !== params.reportId);
     return new HttpResponse(null, { status: 204 });
   }),
 
-  http.get(`${BASE}/api/moderation/accounts`, async () => {
+  http.get(`${BASE}/api/v1/moderation/accounts`, async () => {
     await delay(300);
     return HttpResponse.json(modAccounts);
   }),
 
-  http.patch(`${BASE}/api/moderation/accounts/:username`, async ({ params, request }) => {
+  http.patch(`${BASE}/api/v1/moderation/accounts/:username`, async ({ params, request }) => {
     await delay(250);
     const body = (await request.json()) as { status: ModAccount["status"] };
     modAccounts = modAccounts.map((a) =>

@@ -31,8 +31,6 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!resolvedUsername) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true);
     Promise.all([
       getProfile(resolvedUsername),
       getUserPosts(resolvedUsername),

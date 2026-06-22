@@ -23,6 +23,7 @@ export function RegisterStep2Form() {
     if (!step1) {
       router.replace("/register");
     }
+    return () => clearRegisterStep1();
   }, [router]);
 
   function validateUsername(value: string) {

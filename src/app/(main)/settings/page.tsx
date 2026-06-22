@@ -99,8 +99,7 @@ export default function SettingsPage() {
                 >
                   {/* Mini preview */}
                   <div
-                    className={`w-full h-14 rounded-[12px] flex items-center justify-center ${value === "light" ? "bg-white" : "bg-[#0e0e0e]"}`}
-                    style={{ border: `1.5px solid ${value === "light" ? "#e5e7eb" : "#2a2a2a"}` }}
+                    className={`w-full h-14 rounded-[12px] flex items-center justify-center border-[1.5px] ${value === "light" ? "bg-white border-gray-200" : "bg-gray-950 border-gray-800"}`}
                   >
                     <div className={`w-8 h-1.5 rounded-full ${value === "light" ? "bg-gray-200" : "bg-gray-700"}`} />
                   </div>
