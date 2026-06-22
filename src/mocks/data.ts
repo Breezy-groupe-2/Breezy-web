@@ -1,4 +1,4 @@
-import type { User, Post, Comment } from "@/types";
+import type { User, Post, Comment, Report, ModAccount } from "@/types";
 
 export const MOCK_USERS: User[] = [
   {
@@ -55,7 +55,7 @@ export const MOCK_USERS: User[] = [
     followersCount: 2100,
     followingCount: 430,
     createdAt: "2025-04-01T08:00:00Z",
-    status: "suspended",
+    status: "suspended" as const,
   },
   {
     id: 6,
@@ -67,9 +67,98 @@ export const MOCK_USERS: User[] = [
     followersCount: 640,
     followingCount: 180,
     createdAt: "2025-05-12T10:00:00Z",
-    status: "banned",
+    status: "banned" as const,
+  },
+  {
+    id: 7,
+    username: "hugo",
+    displayName: "Hugo Petit",
+    email: "hugo@example.com",
+    bio: "Growth hacker 🚀",
+    avatarUrl: "https://i.pravatar.cc/150?img=53",
+    followersCount: 210,
+    followingCount: 450,
+    createdAt: "2025-03-18T10:00:00Z",
+    status: "active" as const,
+  },
+  {
+    id: 8,
+    username: "ines",
+    displayName: "Inès Dupont",
+    email: "ines@example.com",
+    bio: "Juste là pour commenter 😈",
+    avatarUrl: "https://i.pravatar.cc/150?img=9",
+    followersCount: 55,
+    followingCount: 120,
+    createdAt: "2025-05-01T10:00:00Z",
+    status: "active" as const,
+  },
+  {
+    id: 9,
+    username: "yann",
+    displayName: "Yann Moreau",
+    email: "yann@example.com",
+    bio: "Content creator • liens en bio",
+    avatarUrl: "https://i.pravatar.cc/150?img=57",
+    followersCount: 940,
+    followingCount: 200,
+    createdAt: "2025-02-14T10:00:00Z",
+    status: "active" as const,
+  },
+  {
+    id: 10,
+    username: "theo",
+    displayName: "Théo Bernard",
+    email: "theo@example.com",
+    bio: "Photographe amateur · côte atlantique",
+    avatarUrl: "https://i.pravatar.cc/150?img=33",
+    followersCount: 388,
+    followingCount: 95,
+    createdAt: "2025-04-20T10:00:00Z",
+    status: "active" as const,
   },
 ];
+
+function userRef(username: string) {
+  const u = MOCK_USERS.find((x) => x.username === username)!;
+  return { username: u.username, displayName: u.displayName, avatarUrl: u.avatarUrl };
+}
+
+export const MOCK_REPORTS: Report[] = [
+  {
+    id: "rp1", kind: "post",
+    author: userRef("hugo"),
+    reason: "Spam", count: 4, time: "il y a 2 h",
+    text: "GAGNE 500€/JOUR depuis chez toi 💸💸 clique sur mon lien en bio, places limitées !!!",
+  },
+  {
+    id: "rp2", kind: "comment",
+    author: userRef("ines"),
+    reason: "Harcèlement", count: 7, time: "il y a 4 h",
+    text: "franchement t'es nul, arrête de poster, personne te lit de toute façon.",
+    onPostAuthor: userRef("theo"),
+  },
+  {
+    id: "rp3", kind: "post",
+    author: userRef("yann"),
+    reason: "Contenu inapproprié", count: 2, time: "il y a 6 h",
+    text: "lien sketch que je devrais pas partager mais bon… (contenu modéré pour l'exemple)",
+  },
+  {
+    id: "rp4", kind: "comment",
+    author: userRef("noahcode"),
+    reason: "Désinformation", count: 3, time: "hier",
+    text: "source : « mon cousin l'a dit ». donc c'est forcément vrai, arrêtez de vérifier.",
+    onPostAuthor: userRef("mae"),
+  },
+];
+
+export const MOCK_MOD_ACCOUNTS: ModAccount[] = MOCK_USERS.map((u) => ({
+  username: u.username,
+  displayName: u.displayName,
+  avatarUrl: u.avatarUrl,
+  status: u.status ?? "active",
+}));
 
 export const MOCK_ME: User = {
   id: 0,
@@ -82,6 +171,7 @@ export const MOCK_ME: User = {
   followingCount: 74,
   createdAt: "2025-06-01T00:00:00Z",
   status: "active",
+  isAdmin: true,
 };
 
 export const MOCK_POSTS: Post[] = [

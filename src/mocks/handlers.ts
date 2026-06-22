@@ -1,12 +1,14 @@
 import { http, HttpResponse, delay } from "msw";
-import { MOCK_ME, MOCK_POSTS, MOCK_USERS, MOCK_COMMENTS } from "./data";
-import type { Post, Comment, User } from "@/types";
+import { MOCK_ME, MOCK_POSTS, MOCK_USERS, MOCK_COMMENTS, MOCK_REPORTS, MOCK_MOD_ACCOUNTS } from "./data";
+import type { Post, Comment, User, ModAccount, Report } from "@/types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
 let posts: Post[] = [...MOCK_POSTS];
 let comments: Comment[] = [...MOCK_COMMENTS];
 let users: User[] = [...MOCK_USERS, MOCK_ME];
+let reports: Report[] = [...MOCK_REPORTS];
+let modAccounts: ModAccount[] = [...MOCK_MOD_ACCOUNTS];
 
 function buildToken(username: string) {
   return `mock-jwt-token:${username}`;
@@ -241,5 +243,39 @@ export const handlers = [
       limit: 20,
       hasMore: false,
     });
+  }),
+
+  // ── Admin ─────────────────────────────────────────────────────────────────
+
+  http.get(`${BASE}/api/moderation/reports`, async () => {
+    await delay(300);
+    return HttpResponse.json(reports);
+  }),
+
+  http.post(`${BASE}/api/moderation/reports/:id/dismiss`, async ({ params }) => {
+    await delay(250);
+    reports = reports.filter((r) => r.id !== params.id);
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  http.delete(`${BASE}/api/moderation/content/:reportId`, async ({ params }) => {
+    await delay(250);
+    reports = reports.filter((r) => r.id !== params.reportId);
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  http.get(`${BASE}/api/moderation/accounts`, async () => {
+    await delay(300);
+    return HttpResponse.json(modAccounts);
+  }),
+
+  http.patch(`${BASE}/api/moderation/accounts/:username`, async ({ params, request }) => {
+    await delay(250);
+    const body = (await request.json()) as { status: ModAccount["status"] };
+    modAccounts = modAccounts.map((a) =>
+      a.username === params.username ? { ...a, status: body.status } : a
+    );
+    reports = reports.filter((r) => r.author.username !== params.username);
+    return HttpResponse.json(modAccounts.find((a) => a.username === params.username));
   }),
 ];
