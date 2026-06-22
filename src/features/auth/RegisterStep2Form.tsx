@@ -87,7 +87,7 @@ export function RegisterStep2Form() {
           height="16"
           viewBox="0 0 24 24"
           fill="none"
-          stroke="#6B6B6B"
+          stroke="var(--text-muted)"
           strokeWidth="2.5"
           strokeLinecap="round"
         >
@@ -141,7 +141,7 @@ export function RegisterStep2Form() {
               height="14"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="#0A0A0A"
+              stroke="var(--text)"
               strokeWidth="2.5"
               strokeLinecap="round"
             >
