@@ -42,7 +42,7 @@ export function PostDetail() {
 
   useEffect(() => {
     if (!id) return;
-    Promise.all([getPost(Number(id)), getComments(Number(id))])
+    Promise.all([getPost(id), getComments(id)])
       .then(([p, c]) => {
         setPost(p);
         setComments(c);
@@ -55,7 +55,7 @@ export function PostDetail() {
     const wasLiked = post.isLiked;
     setPost((p) =>
       p
-        ? { ...p, isLiked: !wasLiked, likesCount: wasLiked ? p.likesCount - 1 : p.likesCount + 1 }
+        ? { ...p, isLiked: !wasLiked, likeCount: wasLiked ? p.likeCount - 1 : p.likeCount + 1 }
         : p
     );
     (wasLiked ? unlikePost : likePost)(post.id);
@@ -95,14 +95,14 @@ export function PostDetail() {
     }
   }
 
-  function handleLikeComment(commentId: number) {
+  function handleLikeComment(commentId: string) {
     setComments((prev) =>
       prev.map((c) =>
         c.id === commentId
           ? {
               ...c,
               isLiked: !c.isLiked,
-              likesCount: c.isLiked ? c.likesCount - 1 : c.likesCount + 1,
+              likeCount: c.isLiked ? c.likeCount - 1 : c.likeCount + 1,
             }
           : c
       )
@@ -277,7 +277,7 @@ export function PostDetail() {
           >
             <span>
               <b className="font-display font-bold" style={{ color: 'var(--text)' }}>
-                {post.likesCount}
+                {post.likeCount}
               </b>{' '}
               j&apos;aime
             </span>
@@ -302,7 +302,7 @@ export function PostDetail() {
             </button>
             <LikeButton
               liked={post.isLiked}
-              count={post.likesCount}
+              count={post.likeCount}
               onToggle={handleLike}
               size={22}
             />
@@ -332,12 +332,12 @@ export function PostDetail() {
                             replies: [
                               ...(cm.replies ?? []),
                               {
-                                id: Date.now(),
+                                id: crypto.randomUUID(),
                                 content,
                                 author: me!,
                                 postId: post.id,
                                 parentId: commentId,
-                                likesCount: 0,
+                                likeCount: 0,
                                 isLiked: false,
                                 createdAt: new Date().toISOString(),
                               },
