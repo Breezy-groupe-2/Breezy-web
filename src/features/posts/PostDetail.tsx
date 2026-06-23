@@ -244,12 +244,22 @@ export function PostDetail() {
               </div>
             </div>
           ) : (
-            <p
-              className="text-[19px] leading-relaxed mt-4 mb-3 whitespace-pre-wrap"
-              style={{ color: 'var(--text)', textWrap: 'pretty' } as React.CSSProperties}
-            >
-              {post.content}
-            </p>
+            <>
+              <p
+                className="text-[19px] leading-relaxed mt-4 mb-3 whitespace-pre-wrap"
+                style={{ color: 'var(--text)', textWrap: 'pretty' } as React.CSSProperties}
+              >
+                {post.content}
+              </p>
+              {post.mediaUrl && (
+                <img
+                  src={post.mediaUrl}
+                  alt="media"
+                  className="w-full rounded-[16px] object-cover mb-3"
+                  style={{ maxHeight: 400 }}
+                />
+              )}
+            </>
           )}
 
           {/* Timestamp */}

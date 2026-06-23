@@ -215,6 +215,14 @@ export function PostCard({
               >
                 {post.content}
               </p>
+              {post.mediaUrl && (
+                <img
+                  src={post.mediaUrl}
+                  alt="media"
+                  className="mt-2 w-full rounded-[14px] object-cover"
+                  style={{ maxHeight: 300 }}
+                />
+              )}
             </Link>
           )}
 
