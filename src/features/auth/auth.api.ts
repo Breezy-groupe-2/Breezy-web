@@ -28,6 +28,6 @@ export async function loginWithGoogle(): Promise<AuthResponse> {
 }
 
 export async function getMe(): Promise<User> {
-  const { data } = await apiClient.get<User>("/api/v1/users/me");
+  const { data } = await apiClient.get<User>("/api/v1/auth/me");
   return data;
 }

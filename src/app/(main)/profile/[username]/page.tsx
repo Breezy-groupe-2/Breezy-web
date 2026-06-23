@@ -59,13 +59,13 @@ export default function ProfilePage() {
     });
   }
 
-  function handleLike(id: number) {
+  function handleLike(id: string) {
     let wasLiked = false;
     setPosts((prev) =>
       prev.map((p) => {
         if (p.id === id) {
           wasLiked = p.isLiked;
-          return { ...p, isLiked: !p.isLiked, likesCount: p.isLiked ? p.likesCount - 1 : p.likesCount + 1 };
+          return { ...p, isLiked: !p.isLiked, likeCount: p.isLiked ? p.likeCount - 1 : p.likeCount + 1 };
         }
         return p;
       })
@@ -74,7 +74,7 @@ export default function ProfilePage() {
       setPosts((prev) =>
         prev.map((p) =>
           p.id === id
-            ? { ...p, isLiked: wasLiked, likesCount: wasLiked ? p.likesCount + 1 : p.likesCount - 1 }
+            ? { ...p, isLiked: wasLiked, likeCount: wasLiked ? p.likeCount + 1 : p.likeCount - 1 }
             : p
         )
       );

@@ -9,9 +9,9 @@ import { formatRelative } from '@/lib/time';
 interface PostCardProps {
   post: Post;
   isOwn?: boolean;
-  onLike?: (id: number) => void;
-  onDelete?: (id: number) => void;
-  onUpdate?: (id: number, newContent: string) => void;
+  onLike?: (id: string) => void;
+  onDelete?: (id: string) => void;
+  onUpdate?: (id: string, newContent: string) => void;
   flat?: boolean;
 }
 
@@ -240,7 +240,7 @@ export function PostCard({
               </button>
               <LikeButton
                 liked={post.isLiked}
-                count={post.likesCount}
+                count={post.likeCount}
                 onToggle={() => onLike?.(post.id)}
               />
               <button

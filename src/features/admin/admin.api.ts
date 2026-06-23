@@ -20,5 +20,5 @@ export async function getModAccounts(): Promise<ModAccount[]> {
 }
 
 export async function setAccountStatus(username: string, status: UserStatus): Promise<void> {
-  await apiClient.patch(`/api/v1/moderation/accounts/${username}`, { status });
+  await apiClient.patch(`/api/v1/users/${username}/moderation`, { status, reason: "Moderation action" });
 }

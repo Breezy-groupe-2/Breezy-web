@@ -8,8 +8,8 @@ import { formatRelative } from "@/lib/time";
 interface CommentItemProps {
   comment: Comment;
   depth?: number;
-  onReply?: (commentId: number, content: string) => void;
-  onLike?: (commentId: number) => void;
+  onReply?: (commentId: string, content: string) => void;
+  onLike?: (commentId: string) => void;
 }
 
 export function CommentItem({
@@ -84,7 +84,7 @@ export function CommentItem({
           <div className="flex items-center gap-4 px-1.5 pt-1.5">
             <LikeButton
               liked={comment.isLiked}
-              count={comment.likesCount}
+              count={comment.likeCount}
               onToggle={() => onLike?.(comment.id)}
               size={15}
             />
