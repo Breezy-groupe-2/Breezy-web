@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { BreezyLogo, Icon, Avatar } from '@/components/ui';
 import { PostCard } from '@/features/posts/PostCard';
 import { FeedSwitch } from '@/features/feed/FeedSwitch';
@@ -12,6 +12,7 @@ import {
   deletePost,
   updatePost,
 } from '@/features/posts/posts.api';
+import { uploadMedia } from '@/features/media/media.api';
 import { useCompose } from '@/store/compose-context';
 import { useTheme } from '@/store/theme-context';
 import { useAuth } from '@/hooks/use-auth';
@@ -31,6 +32,11 @@ export function HomeView() {
   const [composeText, setComposeText] = useState('');
   const [posting, setPosting] = useState(false);
 
+  const [desktopMediaPreview, setDesktopMediaPreview] = useState<string | null>(null);
+  const [desktopMediaUrl, setDesktopMediaUrl] = useState<string | null>(null);
+  const [desktopUploading, setDesktopUploading] = useState(false);
+  const desktopFileRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     getFeed()
       .then(setPosts)
@@ -38,10 +44,11 @@ export function HomeView() {
   }, []);
 
   const handlePost = useCallback(
-    async (content: string) => {
+    async (content: string, mediaUrl?: string) => {
       const optimistic: Post = {
         id: Date.now(),
         content,
+        mediaUrl,
         author: user!,
         likesCount: 0,
         commentsCount: 0,
@@ -50,7 +57,7 @@ export function HomeView() {
       };
       setPosts((prev) => [optimistic, ...prev]);
       try {
-        const created = await createPost(content);
+        const created = await createPost(content, mediaUrl);
         setPosts((prev) => prev.map((p) => (p.id === optimistic.id ? created : p)));
       } catch (err) {
         setPosts((prev) => prev.filter((p) => p.id !== optimistic.id));
@@ -108,12 +115,41 @@ export function HomeView() {
     setPosts((prev) => prev.map((p) => (p.id === id ? updated : p)));
   }
 
+  async function handleDesktopFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const preview = URL.createObjectURL(file);
+    setDesktopMediaPreview(preview);
+    setDesktopMediaUrl(null);
+    setDesktopUploading(true);
+    try {
+      const { url } = await uploadMedia(file);
+      setDesktopMediaUrl(url);
+    } catch {
+      URL.revokeObjectURL(preview);
+      setDesktopMediaPreview(null);
+    } finally {
+      setDesktopUploading(false);
+    }
+  }
+
+  function clearDesktopMedia() {
+    if (desktopMediaPreview) URL.revokeObjectURL(desktopMediaPreview);
+    setDesktopMediaPreview(null);
+    setDesktopMediaUrl(null);
+    if (desktopFileRef.current) desktopFileRef.current.value = '';
+  }
+
   async function handleDesktopPost() {
-    if (!composeText.trim() || posting) return;
+    if (!composeText.trim() || posting || desktopUploading) return;
     setPosting(true);
-    await handlePost(composeText.trim());
-    setComposeText('');
-    setPosting(false);
+    try {
+      await handlePost(composeText.trim(), desktopMediaUrl ?? undefined);
+      setComposeText('');
+      clearDesktopMedia();
+    } finally {
+      setPosting(false);
+    }
   }
 
   const displayedPosts =
@@ -169,20 +205,54 @@ export function HomeView() {
             className="w-full bg-transparent border-none outline-none resize-none text-[18px] leading-relaxed font-sans"
             style={{ color: 'var(--text)' }}
           />
+
+          {/* Desktop media preview */}
+          {desktopMediaPreview && (
+            <div className="relative mt-2 rounded-[14px] overflow-hidden">
+              <img
+                src={desktopMediaPreview}
+                alt="aperçu"
+                className="w-full object-cover"
+                style={{ maxHeight: 200 }}
+              />
+              {desktopUploading && (
+                <div
+                  className="absolute inset-0 flex items-center justify-center"
+                  style={{ background: 'rgba(0,0,0,0.35)' }}
+                >
+                  <span className="w-7 h-7 rounded-full border-[3px] border-white border-t-transparent animate-spin block" />
+                </div>
+              )}
+              {!desktopUploading && (
+                <button
+                  onClick={clearDesktopMedia}
+                  className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center"
+                  style={{ background: 'rgba(0,0,0,0.5)' }}
+                >
+                  <Icon name="close" size={12} color="white" />
+                </button>
+              )}
+            </div>
+          )}
+
           <div
             className="flex items-center justify-between pt-3"
             style={{ borderTop: '1px solid var(--border)' }}
           >
             <div className="flex gap-1">
-              {(['image', 'gust'] as const).map((n) => (
-                <button
-                  key={n}
-                  className="w-9 h-9 flex items-center justify-center rounded-full"
-                  style={{ color: 'var(--primary)' }}
-                >
-                  <Icon name={n} size={20} />
-                </button>
-              ))}
+              <button
+                onClick={() => desktopFileRef.current?.click()}
+                className="w-9 h-9 flex items-center justify-center rounded-full"
+                style={{ color: 'var(--primary)' }}
+              >
+                <Icon name="image" size={20} />
+              </button>
+              <button
+                className="w-9 h-9 flex items-center justify-center rounded-full"
+                style={{ color: 'var(--primary)' }}
+              >
+                <Icon name="gust" size={20} />
+              </button>
             </div>
             <div className="flex items-center gap-3">
               <span className="text-[12px] font-semibold" style={{ color: 'var(--text-faint)' }}>
@@ -190,7 +260,7 @@ export function HomeView() {
               </span>
               <button
                 onClick={handleDesktopPost}
-                disabled={!composeText.trim() || composeText.length > 280 || posting}
+                disabled={!composeText.trim() || composeText.length > 280 || posting || desktopUploading}
                 className="h-9 px-5 rounded-full text-[14px] font-bold disabled:opacity-50"
                 style={{ background: 'var(--primary)', color: 'var(--on-primary)' }}
               >
@@ -200,6 +270,15 @@ export function HomeView() {
           </div>
         </div>
       </div>
+
+      {/* Hidden desktop file input */}
+      <input
+        ref={desktopFileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleDesktopFileSelect}
+      />
 
       {/* Feed */}
       {loading ? (
