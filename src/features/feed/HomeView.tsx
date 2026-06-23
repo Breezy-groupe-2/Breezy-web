@@ -40,10 +40,10 @@ export function HomeView() {
   const handlePost = useCallback(
     async (content: string) => {
       const optimistic: Post = {
-        id: Date.now(),
+        id: crypto.randomUUID(),
         content,
         author: user!,
-        likesCount: 0,
+        likeCount: 0,
         commentsCount: 0,
         isLiked: false,
         createdAt: new Date().toISOString(),
@@ -64,7 +64,7 @@ export function HomeView() {
     registerHandler(handlePost);
   }, [registerHandler, handlePost]);
 
-  function handleLike(id: number) {
+  function handleLike(id: string) {
     let wasLiked = false;
     setPosts((prev) =>
       prev.map((p) => {
@@ -73,7 +73,7 @@ export function HomeView() {
           return {
             ...p,
             isLiked: !p.isLiked,
-            likesCount: p.isLiked ? p.likesCount - 1 : p.likesCount + 1,
+            likeCount: p.isLiked ? p.likeCount - 1 : p.likeCount + 1,
           };
         }
         return p;
@@ -86,7 +86,7 @@ export function HomeView() {
             ? {
                 ...p,
                 isLiked: wasLiked,
-                likesCount: wasLiked ? p.likesCount + 1 : p.likesCount - 1,
+                likeCount: wasLiked ? p.likeCount + 1 : p.likeCount - 1,
               }
             : p
         )
@@ -94,7 +94,7 @@ export function HomeView() {
     (wasLiked ? unlikePost : likePost)(id).catch(rollback);
   }
 
-  function handleDelete(id: number) {
+  function handleDelete(id: string) {
     setPosts((prev) => prev.filter((p) => p.id !== id));
     deletePost(id).catch(() => {
       getFeed()
@@ -103,7 +103,7 @@ export function HomeView() {
     });
   }
 
-  async function handleUpdate(id: number, newContent: string) {
+  async function handleUpdate(id: string, newContent: string) {
     const updated = await updatePost(id, newContent);
     setPosts((prev) => prev.map((p) => (p.id === id ? updated : p)));
   }
