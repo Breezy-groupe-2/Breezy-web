@@ -1,12 +1,7 @@
 import apiClient from "@/lib/axios";
-import type { Post, PaginatedResponse } from "@/types";
+import type { Post } from "@/types";
 
-export async function getAllPosts(): Promise<Post[]> {
-  const { data } = await apiClient.get<PaginatedResponse<Post>>("/api/v1/posts");
-  return data.data;
-}
-
-export async function getPost(id: number): Promise<Post> {
+export async function getPost(id: string): Promise<Post> {
   const { data } = await apiClient.get<Post>(`/api/v1/posts/${id}`);
   return data;
 }
@@ -16,26 +11,38 @@ export async function createPost(content: string): Promise<Post> {
   return data;
 }
 
-export async function updatePost(id: number, content: string): Promise<Post> {
-  const { data } = await apiClient.patch<Post>(`/api/v1/posts/${id}`, { content });
+export async function updatePost(id: string, content: string): Promise<Post> {
+  const { data } = await apiClient.put<Post>(`/api/v1/posts/${id}`, { content });
   return data;
 }
 
-export async function deletePost(id: number): Promise<void> {
+export async function deletePost(id: string): Promise<void> {
   await apiClient.delete(`/api/v1/posts/${id}`);
 }
 
-export async function likePost(id: number): Promise<void> {
-  await apiClient.post(`/api/v1/posts/${id}/likes`);
+export async function likePost(id: string): Promise<{ id: string; likeCount: number }> {
+  const { data } = await apiClient.post<{ id: string; likeCount: number }>(`/api/v1/posts/${id}/like`);
+  return data;
 }
 
-export async function unlikePost(id: number): Promise<void> {
-  await apiClient.delete(`/api/v1/posts/${id}/likes`);
+export async function unlikePost(id: string): Promise<{ id: string; likeCount: number }> {
+  const { data } = await apiClient.delete<{ id: string; likeCount: number }>(`/api/v1/posts/${id}/like`);
+  return data;
 }
 
 export async function getUserPosts(username: string): Promise<Post[]> {
-  const { data } = await apiClient.get<PaginatedResponse<Post>>(
-    `/api/v1/users/${username}/posts`
-  );
-  return data.data;
+  const { data } = await apiClient.get<Post[]>(`/api/v1/posts/user/${username}`);
+  return data;
+}
+
+export async function getOwnPosts(): Promise<Post[]> {
+  const { data } = await apiClient.get<Post[]>("/api/v1/posts/me");
+  return data;
+}
+
+export async function getPostsByAuthors(authorIds: string[], limit?: number): Promise<Post[]> {
+  const { data } = await apiClient.get<Post[]>("/api/v1/posts", {
+    params: { authorIds: authorIds.join(","), limit },
+  });
+  return data;
 }

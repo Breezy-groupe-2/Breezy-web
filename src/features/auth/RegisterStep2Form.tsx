@@ -28,7 +28,7 @@ export function RegisterStep2Form() {
 
   function validateUsername(value: string) {
     if (!value) return "Le nom d'utilisateur est requis.";
-    if (!/^[a-zA-Z0-9_]{3,20}$/.test(value)) return "3 à 20 caractères : lettres, chiffres ou _.";
+    if (!/^[a-zA-Z0-9_]{3,50}$/.test(value)) return "3 à 50 caractères : lettres, chiffres ou _.";
     return null;
   }
 
@@ -58,7 +58,7 @@ export function RegisterStep2Form() {
       router.push("/home");
     } catch (err) {
       if (isAxiosError(err) && err.response) {
-        const msg = err.response.data?.message ?? "Une erreur est survenue.";
+        const msg = err.response.data?.error ?? "Une erreur est survenue.";
         setError(msg);
       } else {
         setError("Une erreur est survenue. Réessaie plus tard.");

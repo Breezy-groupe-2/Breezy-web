@@ -1,5 +1,5 @@
 import apiClient from "@/lib/axios";
-import type { User, PaginatedResponse } from "@/types";
+import type { User } from "@/types";
 
 export async function followUser(username: string): Promise<void> {
   await apiClient.post(`/api/v1/users/${username}/follow`);
@@ -10,15 +10,15 @@ export async function unfollowUser(username: string): Promise<void> {
 }
 
 export async function getFollowers(username: string): Promise<User[]> {
-  const { data } = await apiClient.get<PaginatedResponse<User>>(
+  const { data } = await apiClient.get<User[]>(
     `/api/v1/users/${username}/followers`
   );
-  return data.data;
+  return data;
 }
 
 export async function getFollowing(username: string): Promise<User[]> {
-  const { data } = await apiClient.get<PaginatedResponse<User>>(
+  const { data } = await apiClient.get<User[]>(
     `/api/v1/users/${username}/following`
   );
-  return data.data;
+  return data;
 }

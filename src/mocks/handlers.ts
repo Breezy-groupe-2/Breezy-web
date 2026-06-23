@@ -44,7 +44,7 @@ export const handlers = [
     const body = (await request.json()) as { email?: string; password?: string; username?: string };
     const username = body.username?.trim() || `user-${Date.now()}`;
     const user: User = {
-      id: Date.now(),
+      id: String(Date.now()),
       username,
       displayName: username,
       email: body.email ?? `${username}@example.com`,
@@ -74,6 +74,14 @@ export const handlers = [
     return HttpResponse.json(user);
   }),
 
+  http.get(`${BASE}/api/v1/auth/me`, async ({ request }) => {
+    await delay(200);
+    const username = currentUsername(request);
+    const user = username ? users.find((u) => u.username === username) : null;
+    if (!user) return new HttpResponse(null, { status: 401 });
+    return HttpResponse.json(user);
+  }),
+
   http.get(`${BASE}/api/v1/users/:username`, async ({ params }) => {
     await delay(200);
     const user = users.find((u) => u.username === params.username);
@@ -83,25 +91,41 @@ export const handlers = [
 
   // ── Posts ─────────────────────────────────────────────────────────────────
 
-  http.get(`${BASE}/api/v1/posts`, async () => {
+  http.get(`${BASE}/api/v1/feed`, async () => {
     await delay(300);
-    return HttpResponse.json({
-      data: posts,
-      total: posts.length,
-      page: 1,
-      limit: 20,
-      hasMore: false,
-    });
+    return HttpResponse.json(posts);
+  }),
+
+  http.get(`${BASE}/api/v1/posts`, async ({ request }) => {
+    await delay(300);
+    const url = new URL(request.url);
+    const authorIdsParam = url.searchParams.get("authorIds");
+    const limitParam = url.searchParams.get("limit");
+    const authorIds = authorIdsParam ? authorIdsParam.split(",") : null;
+    let result = authorIds ? posts.filter((p) => authorIds.includes(p.author.id)) : posts;
+    const limit = limitParam ? Number(limitParam) : null;
+    if (limit && limit > 0) {
+      result = result.slice(0, limit);
+    }
+    return HttpResponse.json(result);
+  }),
+
+  http.get(`${BASE}/api/v1/posts/me`, async ({ request }) => {
+    await delay(300);
+    const username = currentUsername(request);
+    if (!username) return new HttpResponse(null, { status: 401 });
+    const userPosts = posts.filter((p) => p.author.username === username);
+    return HttpResponse.json(userPosts);
   }),
 
   http.post(`${BASE}/api/v1/posts`, async ({ request }) => {
     await delay(350);
     const body = (await request.json()) as { content: string };
     const newPost: Post = {
-      id: Date.now(),
+      id: String(Date.now()),
       content: body.content,
       author: MOCK_ME,
-      likesCount: 0,
+      likeCount: 0,
       commentsCount: 0,
       isLiked: false,
       createdAt: new Date().toISOString(),
@@ -112,71 +136,67 @@ export const handlers = [
 
   http.get(`${BASE}/api/v1/posts/:id`, async ({ params }) => {
     await delay(200);
-    const post = posts.find((p) => p.id === Number(params.id));
+    const post = posts.find((p) => p.id === params.id);
     if (!post) return new HttpResponse(null, { status: 404 });
     return HttpResponse.json(post);
   }),
 
-  http.patch(`${BASE}/api/v1/posts/:id`, async ({ request, params }) => {
+  http.put(`${BASE}/api/v1/posts/:id`, async ({ request, params }) => {
     await delay(250);
     const body = (await request.json()) as { content: string };
     posts = posts.map((p) =>
-      p.id === Number(params.id) ? { ...p, content: body.content } : p
+      p.id === params.id ? { ...p, content: body.content } : p
     );
-    const updated = posts.find((p) => p.id === Number(params.id));
+    const updated = posts.find((p) => p.id === params.id);
     if (!updated) return new HttpResponse(null, { status: 404 });
     return HttpResponse.json(updated);
   }),
 
   http.delete(`${BASE}/api/v1/posts/:id`, async ({ params }) => {
     await delay(200);
-    posts = posts.filter((p) => p.id !== Number(params.id));
+    posts = posts.filter((p) => p.id !== params.id);
     return new HttpResponse(null, { status: 204 });
   }),
 
   // ── Likes ─────────────────────────────────────────────────────────────────
 
-  http.post(`${BASE}/api/v1/posts/:id/likes`, async ({ params }) => {
+  http.post(`${BASE}/api/v1/posts/:id/like`, async ({ params }) => {
     await delay(150);
-    const id = Number(params.id);
+    const id = params.id;
     posts = posts.map((p) =>
-      p.id === id ? { ...p, isLiked: true, likesCount: p.likesCount + 1 } : p
+      p.id === id ? { ...p, isLiked: true, likeCount: p.likeCount + 1 } : p
     );
-    return new HttpResponse(null, { status: 204 });
+    const updated = posts.find((p) => p.id === id);
+    return HttpResponse.json({ id, likeCount: updated?.likeCount ?? 0 });
   }),
 
-  http.delete(`${BASE}/api/v1/posts/:id/likes`, async ({ params }) => {
+  http.delete(`${BASE}/api/v1/posts/:id/like`, async ({ params }) => {
     await delay(150);
-    const id = Number(params.id);
+    const id = params.id;
     posts = posts.map((p) =>
-      p.id === id ? { ...p, isLiked: false, likesCount: Math.max(0, p.likesCount - 1) } : p
+      p.id === id ? { ...p, isLiked: false, likeCount: Math.max(0, p.likeCount - 1) } : p
     );
-    return new HttpResponse(null, { status: 204 });
+    const updated = posts.find((p) => p.id === id);
+    return HttpResponse.json({ id, likeCount: updated?.likeCount ?? 0 });
   }),
 
   // ── Comments ──────────────────────────────────────────────────────────────
 
   http.get(`${BASE}/api/v1/posts/:id/comments`, async ({ params }) => {
     await delay(250);
-    const postComments = comments.filter((c) => c.postId === Number(params.id) && !c.parentId);
-    return HttpResponse.json({
-      data: postComments,
-      total: postComments.length,
-      page: 1,
-      limit: 20,
-      hasMore: false,
-    });
+    const postComments = comments.filter((c) => c.postId === params.id && !c.parentId);
+    return HttpResponse.json(postComments);
   }),
 
   http.post(`${BASE}/api/v1/posts/:id/comments`, async ({ request, params }) => {
     await delay(300);
     const body = (await request.json()) as { content: string };
     const newComment: Comment = {
-      id: Date.now(),
+      id: String(Date.now()),
       content: body.content,
       author: MOCK_ME,
-      postId: Number(params.id),
-      likesCount: 0,
+      postId: params.id as string,
+      likeCount: 0,
       isLiked: false,
       createdAt: new Date().toISOString(),
     };
@@ -187,9 +207,15 @@ export const handlers = [
     return HttpResponse.json(newComment, { status: 201 });
   }),
 
+  http.get(`${BASE}/api/v1/comments/:commentId/replies`, async ({ params }) => {
+    await delay(200);
+    const replies = comments.filter((c) => c.parentId === params.commentId);
+    return HttpResponse.json(replies);
+  }),
+
   // ── Profile edit ──────────────────────────────────────────────────────────
 
-  http.patch(`${BASE}/api/v1/users/me`, async ({ request }) => {
+  http.put(`${BASE}/api/v1/users/me`, async ({ request }) => {
     await delay(300);
     const username = currentUsername(request);
     if (!username) return new HttpResponse(null, { status: 401 });
@@ -200,6 +226,25 @@ export const handlers = [
     users = users.map((u) => (u.username === username ? next : u));
     return HttpResponse.json(next);
   }),
+
+  http.patch(
+    `${BASE}/api/v1/users/me/preferences`,
+    async ({ request }) => {
+      await delay(200);
+      const username = currentUsername(request);
+      if (!username) return new HttpResponse(null, { status: 401 });
+      const updated = users.find((u) => u.username === username);
+      if (!updated) return new HttpResponse(null, { status: 404 });
+      const body = (await request.json()) as { theme: { mode: "light" | "dark"; accentColor: string } };
+      const nextPreferences = {
+        ...updated.preferences,
+        theme: { ...updated.preferences?.theme, ...body.theme },
+      };
+      const next = { ...updated, preferences: nextPreferences };
+      users = users.map((u) => (u.username === username ? next : u));
+      return HttpResponse.json(next.preferences);
+    }
+  ),
 
   // ── Follow ────────────────────────────────────────────────────────────────
 
@@ -220,7 +265,7 @@ export const handlers = [
     const user = users.find((u) => u.username === params.username);
     const count = user?.followersCount ?? 0;
     const list = users.slice(0, Math.min(count, users.length));
-    return HttpResponse.json({ data: list, total: list.length, page: 1, limit: 20, hasMore: false });
+    return HttpResponse.json(list);
   }),
 
   http.get(`${BASE}/api/v1/users/:username/following`, async ({ params }) => {
@@ -228,21 +273,15 @@ export const handlers = [
     const user = users.find((u) => u.username === params.username);
     const count = user?.followingCount ?? 0;
     const list = users.slice(0, Math.min(count, users.length));
-    return HttpResponse.json({ data: list, total: list.length, page: 1, limit: 20, hasMore: false });
+    return HttpResponse.json(list);
   }),
 
   // ── User posts ────────────────────────────────────────────────────────────
 
-  http.get(`${BASE}/api/v1/users/:username/posts`, async ({ params }) => {
+  http.get(`${BASE}/api/v1/posts/user/:username`, async ({ params }) => {
     await delay(250);
     const userPosts = posts.filter((p) => p.author.username === params.username);
-    return HttpResponse.json({
-      data: userPosts,
-      total: userPosts.length,
-      page: 1,
-      limit: 20,
-      hasMore: false,
-    });
+    return HttpResponse.json(userPosts);
   }),
 
   // ── Admin ─────────────────────────────────────────────────────────────────
@@ -269,9 +308,13 @@ export const handlers = [
     return HttpResponse.json(modAccounts);
   }),
 
-  http.patch(`${BASE}/api/v1/moderation/accounts/:username`, async ({ params, request }) => {
+  http.patch(`${BASE}/api/v1/users/:username/moderation`, async ({ params, request }) => {
     await delay(250);
-    const body = (await request.json()) as { status: ModAccount["status"] };
+    const body = (await request.json()) as {
+      status: ModAccount["status"];
+      durationHours?: number;
+      reason?: string;
+    };
     modAccounts = modAccounts.map((a) =>
       a.username === params.username ? { ...a, status: body.status } : a
     );

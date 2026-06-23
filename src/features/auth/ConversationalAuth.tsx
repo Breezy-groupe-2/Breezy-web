@@ -69,7 +69,7 @@ export function ConversationalAuth({ initialMode = "login" }: ConversationalAuth
     setErr("");
     if (key === "email") setEmail(v);
     else if (key === "pwd") setPwd(v);
-    else setUsername(v.replace(/[^a-zA-Z0-9]/g, ""));
+    else setUsername(v.replace(/[^a-zA-Z0-9_]/g, ""));
   };
 
   useEffect(() => {
@@ -83,9 +83,9 @@ export function ConversationalAuth({ initialMode = "login" }: ConversationalAuth
         : "Hmm, cet email ne ressemble pas à un email.";
     if (key === "pwd")
       return pwd.length >= 8 ? "" : "Il faut au moins 8 caractères.";
-    return /^[a-zA-Z0-9]{3,20}$/.test(username)
+    return /^[a-zA-Z0-9_]{3,50}$/.test(username)
       ? ""
-      : "3 à 20 caractères, lettres et chiffres.";
+      : "3 à 50 caractères : lettres, chiffres ou _.";
   }
 
   async function next() {
@@ -108,7 +108,7 @@ export function ConversationalAuth({ initialMode = "login" }: ConversationalAuth
       router.push("/home");
     } catch (err) {
       if (isAxiosError(err) && err.response) {
-        setErr(err.response.data?.message ?? "Identifiants incorrects.");
+        setErr(err.response.data?.error ?? "Identifiants incorrects.");
       } else {
         setErr("Une erreur est survenue. Réessaie plus tard.");
       }

@@ -1,7 +1,7 @@
 import apiClient from "@/lib/axios";
-import type { Post, PaginatedResponse } from "@/types";
+import type { Post } from "@/types";
 
-export async function getFeed(): Promise<Post[]> {
-  const { data } = await apiClient.get<PaginatedResponse<Post>>("/api/v1/posts");
-  return data.data;
+export async function getFeed(limit?: number): Promise<Post[]> {
+  const { data } = await apiClient.get<Post[]>("/api/v1/feed", limit ? { params: { limit } } : undefined);
+  return data;
 }

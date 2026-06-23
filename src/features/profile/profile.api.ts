@@ -9,7 +9,13 @@ export async function getProfile(username: string): Promise<User> {
 export async function updateProfile(payload: {
   displayName?: string;
   bio?: string;
+  avatarUrl?: string;
 }): Promise<User> {
-  const { data } = await apiClient.patch<User>("/api/v1/users/me", payload);
+  const { data } = await apiClient.put<User>("/api/v1/users/me", payload);
+  return data;
+}
+
+export async function updatePreferences(payload: { theme: { mode: "light" | "dark"; accentColor: string } }): Promise<User> {
+  const { data } = await apiClient.patch<User>("/api/v1/users/me/preferences", payload);
   return data;
 }

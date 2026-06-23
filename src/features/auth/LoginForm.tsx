@@ -37,7 +37,7 @@ export function LoginForm() {
       router.push("/home");
     } catch (err) {
       if (isAxiosError(err) && err.response) {
-        const msg = err.response.data?.message ?? "Identifiants incorrects.";
+        const msg = err.response.data?.error ?? "Identifiants incorrects.";
         setError(msg);
       } else {
         setError("Une erreur est survenue. Réessaie plus tard.");
