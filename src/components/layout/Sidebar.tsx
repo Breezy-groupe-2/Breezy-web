@@ -19,7 +19,6 @@ const NAV_ITEMS: {
   { href: "/search",     label: "Découvrir",  icon: "search" },
   { href: "/activity",   label: "Activité",   icon: "bell",     iconFill: "bellFill" },
   { href: "/profile/me", label: "Profil",     icon: "user" },
-  { href: "/settings",   label: "Paramètres", icon: "settings" },
 ];
 
 export function Sidebar() {
