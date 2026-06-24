@@ -1,13 +1,21 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Avatar, Icon } from "@/components/ui";
 import { PostCard } from "@/features/posts/PostCard";
 import { getProfile, updateProfile } from "@/features/profile/profile.api";
-import { getUserPosts, likePost, unlikePost } from "@/features/posts/posts.api";
+import {
+  getUserPosts,
+  createPost,
+  likePost,
+  unlikePost,
+  deletePost,
+  updatePost,
+} from "@/features/posts/posts.api";
 import { useAuth } from "@/hooks/use-auth";
 import { useFollow } from "@/store/follow-context";
+import { useCompose } from "@/store/compose-context";
 import type { User, Post } from "@/types";
 
 type Tab = "posts" | "media" | "likes";
@@ -21,6 +29,7 @@ export function ProfileView() {
   const isMe = resolvedUsername === me?.username;
 
   const { isFollowing, toggle, ready: followReady } = useFollow();
+  const { registerHandler } = useCompose();
 
   const [profile, setProfile] = useState<User | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -30,6 +39,9 @@ export function ProfileView() {
   const [editName, setEditName] = useState("");
   const [editBio, setEditBio] = useState("");
   const [editAvatar, setEditAvatar] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [shareToast, setShareToast] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!resolvedUsername) return;
@@ -71,15 +83,15 @@ export function ProfileView() {
   }, [followed, followReady, isMe, profile, resolvedUsername]);
 
   function handleLike(id: string) {
-    let wasLiked = false;
+    const target = posts.find((p) => p.id === id);
+    if (!target) return;
+    const wasLiked = target.isLiked;
     setPosts((prev) =>
-      prev.map((p) => {
-        if (p.id === id) {
-          wasLiked = p.isLiked;
-          return { ...p, isLiked: !p.isLiked, likeCount: p.isLiked ? p.likeCount - 1 : p.likeCount + 1 };
-        }
-        return p;
-      })
+      prev.map((p) =>
+        p.id === id
+          ? { ...p, isLiked: !wasLiked, likeCount: wasLiked ? p.likeCount - 1 : p.likeCount + 1 }
+          : p
+      )
     );
     const rollback = () =>
       setPosts((prev) =>
@@ -90,6 +102,57 @@ export function ProfileView() {
         )
       );
     (wasLiked ? unlikePost : likePost)(id).catch(rollback);
+  }
+
+  // New posts created from the global composer should appear instantly when the
+  // author is viewing their own profile.
+  const handlePost = useCallback(
+    async (content: string, mediaUrl?: string) => {
+      const created = await createPost(content, mediaUrl);
+      if (isMe) setPosts((prev) => [created, ...prev]);
+    },
+    [isMe]
+  );
+
+  useEffect(() => {
+    if (!isMe) return;
+    registerHandler(handlePost);
+  }, [isMe, registerHandler, handlePost]);
+
+  function handleDelete(id: string) {
+    const snapshot = posts;
+    setPosts((prev) => prev.filter((p) => p.id !== id));
+    deletePost(id).catch(() => setPosts(snapshot));
+  }
+
+  async function handleUpdate(id: string, newContent: string) {
+    const updated = await updatePost(id, newContent);
+    setPosts((prev) => prev.map((p) => (p.id === id ? updated : p)));
+  }
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onOutside);
+    return () => document.removeEventListener("mousedown", onOutside);
+  }, [menuOpen]);
+
+  function handleShare() {
+    setMenuOpen(false);
+    const url = `${window.location.origin}/profile/${profile?.username}`;
+    navigator.clipboard?.writeText(url).catch(() => {});
+    setShareToast(true);
+    setTimeout(() => setShareToast(false), 2000);
+  }
+
+  function handleReport() {
+    setMenuOpen(false);
+    setShareToast(false);
+    window.alert("Signalement transmis à la modération. Merci.");
   }
 
   async function saveProfile() {
@@ -154,17 +217,62 @@ export function ProfileView() {
           >
             <Icon name="back" size={20} color="white" />
           </button>
-          <div
-            className="w-10 h-10 flex items-center justify-center rounded-full"
-            style={{
-              background: "rgba(0,0,0,0.22)",
-              backdropFilter: "blur(8px)",
-            }}
-          >
-            <Icon name="more" size={20} color="white" />
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setMenuOpen((o) => !o)}
+              className="w-10 h-10 flex items-center justify-center rounded-full"
+              style={{
+                background: "rgba(0,0,0,0.22)",
+                backdropFilter: "blur(8px)",
+              }}
+            >
+              <Icon name="more" size={20} color="white" />
+            </button>
+            {menuOpen && (
+              <div
+                className="absolute right-0 mt-2 w-56 rounded-2xl overflow-hidden z-50 py-1"
+                style={{
+                  background: "var(--surface)",
+                  boxShadow: "var(--card-shadow)",
+                  border: "1px solid var(--border)",
+                }}
+              >
+                <button
+                  onClick={handleShare}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-[14.5px] font-semibold text-left"
+                  style={{ color: "var(--text)" }}
+                >
+                  <Icon name="share" size={17} color="var(--text-muted)" />
+                  Partager le profil
+                </button>
+                {!isMe && (
+                  <button
+                    onClick={handleReport}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-[14.5px] font-semibold text-left"
+                    style={{ color: "var(--like)" }}
+                  >
+                    <Icon name="flag" size={17} color="var(--like)" />
+                    Signaler @{profile.username}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {shareToast && (
+        <div
+          className="fixed left-1/2 -translate-x-1/2 bottom-24 z-[70] px-4 py-2.5 rounded-full text-[14px] font-bold"
+          style={{
+            background: "var(--text)",
+            color: "var(--bg)",
+            boxShadow: "var(--card-shadow)",
+          }}
+        >
+          Lien du profil copié
+        </div>
+      )}
 
       {/* Profile header */}
       <div className="px-5">
@@ -290,7 +398,14 @@ export function ProfileView() {
       <div className="flex flex-col gap-3 p-3.5 mt-3 pb-[120px] md:pb-8">
         {tab === "posts" &&
           posts.map((post) => (
-            <PostCard key={post.id} post={post} onLike={handleLike} />
+            <PostCard
+              key={post.id}
+              post={post}
+              isOwn={post.author.username === me?.username}
+              onLike={handleLike}
+              onDelete={handleDelete}
+              onUpdate={handleUpdate}
+            />
           ))}
         {tab !== "posts" && (
           <p

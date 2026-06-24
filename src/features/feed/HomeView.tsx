@@ -82,19 +82,19 @@ export function HomeView() {
   }, [registerHandler, handlePost]);
 
   function handleLike(id: string) {
-    let wasLiked = false;
+    const target = posts.find((p) => p.id === id);
+    if (!target) return;
+    const wasLiked = target.isLiked;
     setPosts((prev) =>
-      prev.map((p) => {
-        if (p.id === id) {
-          wasLiked = p.isLiked;
-          return {
-            ...p,
-            isLiked: !p.isLiked,
-            likeCount: p.isLiked ? p.likeCount - 1 : p.likeCount + 1,
-          };
-        }
-        return p;
-      })
+      prev.map((p) =>
+        p.id === id
+          ? {
+              ...p,
+              isLiked: !wasLiked,
+              likeCount: wasLiked ? p.likeCount - 1 : p.likeCount + 1,
+            }
+          : p
+      )
     );
     const rollback = () =>
       setPosts((prev) =>
