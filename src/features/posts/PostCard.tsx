@@ -253,10 +253,12 @@ export function PostCard({
                   style={{ maxHeight: 300 }}
                 />
               )}
-              {/* Embedded quoted post (quote repost) */}
-              {quoted && <QuotedCard post={quoted} />}
             </Link>
           )}
+
+          {/* Embedded quoted post (quote repost) — kept outside the post link to
+              avoid a nested <a> */}
+          {!editing && quoted && <QuotedCard post={quoted} />}
 
           {/* Actions */}
           {!editing && (
