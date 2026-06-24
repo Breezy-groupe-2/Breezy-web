@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { BreezyLogo, Icon, Avatar } from '@/components/ui';
 import { PostCard } from '@/features/posts/PostCard';
 import { FeedSwitch } from '@/features/feed/FeedSwitch';
-import { getFeed } from '@/features/feed/feed.api';
+import { getFeed, getAllPosts } from '@/features/feed/feed.api';
 import {
   createPost,
   likePost,
@@ -28,7 +28,6 @@ export function HomeView() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [feedTab, setFeedTab] = useState<FeedTab>('all');
-  const [following] = useState(new Set<string>());
   const [composeText, setComposeText] = useState('');
   const [posting, setPosting] = useState(false);
 
@@ -37,11 +36,22 @@ export function HomeView() {
   const [desktopUploading, setDesktopUploading] = useState(false);
   const desktopFileRef = useRef<HTMLInputElement>(null);
 
+  // "Mon feed" = posts from people you follow; "Général" = all posts.
+  const loadFeed = useCallback(
+    (tab: FeedTab) => (tab === 'mine' ? getFeed() : getAllPosts()),
+    []
+  );
+
   useEffect(() => {
-    getFeed()
-      .then(setPosts)
-      .finally(() => setLoading(false));
-  }, []);
+    let cancelled = false;
+    loadFeed(feedTab)
+      .then((p) => !cancelled && setPosts(p))
+      .catch(() => !cancelled && setPosts([]))
+      .finally(() => !cancelled && setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [feedTab, loadFeed]);
 
   const handlePost = useCallback(
     async (content: string, mediaUrl?: string) => {
@@ -104,7 +114,7 @@ export function HomeView() {
   function handleDelete(id: string) {
     setPosts((prev) => prev.filter((p) => p.id !== id));
     deletePost(id).catch(() => {
-      getFeed()
+      loadFeed(feedTab)
         .then(setPosts)
         .catch(() => {});
     });
@@ -152,12 +162,8 @@ export function HomeView() {
     }
   }
 
-  const displayedPosts =
-    feedTab === 'all'
-      ? posts
-      : posts.filter(
-          (p) => p.author.username === user?.username || following.has(p.author.username)
-        );
+  // Posts are already scoped server-side per tab (followed feed vs global).
+  const displayedPosts = posts;
 
   return (
     <div className="flex flex-col min-h-svh scrollbar-hide overflow-y-auto">

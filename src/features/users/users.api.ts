@@ -1,6 +1,11 @@
 import apiClient from "@/lib/axios";
 import type { User } from "@/types";
 
+export async function getSuggestions(): Promise<User[]> {
+  const { data } = await apiClient.get<User[]>("/api/v1/users/suggestions");
+  return data;
+}
+
 export async function followUser(username: string): Promise<void> {
   await apiClient.post(`/api/v1/users/${username}/follow`);
 }

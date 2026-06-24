@@ -1,8 +1,13 @@
 import apiClient from "@/lib/axios";
-import type { Post } from "@/types";
+import type { Post, Trend } from "@/types";
 
 export async function getPost(id: string): Promise<Post> {
   const { data } = await apiClient.get<Post>(`/api/v1/posts/${id}`);
+  return data;
+}
+
+export async function getTrends(): Promise<Trend[]> {
+  const { data } = await apiClient.get<Trend[]>("/api/v1/posts/trends");
   return data;
 }
 

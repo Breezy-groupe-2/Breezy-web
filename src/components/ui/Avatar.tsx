@@ -1,5 +1,3 @@
-import Image from "next/image";
-
 const GRADIENTS: [string, string][] = [
   ["oklch(0.72 0.18 152)", "oklch(0.62 0.22 180)"],
   ["oklch(0.70 0.18 260)", "oklch(0.62 0.20 300)"],
@@ -29,15 +27,10 @@ export function Avatar({
   ring = false,
   className = "",
 }: AvatarProps) {
-  const initials = displayName
-    .split(" ")
-    .filter((w) => w.length > 0)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase() || "?";
-
-  const [from, to] = gradientFor(displayName);
+  const label = (displayName ?? "").trim();
+  // First letter of the handle/name, or "?" when there is nothing to show.
+  const initial = label ? [...label][0].toUpperCase() : "?";
+  const [from, to] = gradientFor(label);
 
   return (
     <div
@@ -47,7 +40,7 @@ export function Avatar({
         height: size,
         borderRadius: "var(--r-avatar)",
         background: `linear-gradient(140deg, ${from}, ${to})`,
-        fontSize: size * 0.36,
+        fontSize: size * 0.42,
         fontFamily: "var(--font-display)",
         letterSpacing: "-0.02em",
         boxShadow: ring
@@ -55,8 +48,12 @@ export function Avatar({
           : undefined,
       }}
     >
+      {/* A profile photo is optional. When set (any URL), show it; otherwise the
+          gradient + initial below shows through. Plain <img> avoids next/image's
+          per-host allowlist so users can point at any image URL. */}
       {src ? (
-        <Image
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
           src={src}
           alt={displayName}
           width={size}
@@ -64,7 +61,7 @@ export function Avatar({
           className="object-cover w-full h-full"
         />
       ) : (
-        initials
+        initial
       )}
     </div>
   );

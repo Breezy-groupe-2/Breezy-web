@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Avatar, Icon, LikeButton } from "@/components/ui";
 import type { Comment } from "@/types";
 import { formatRelative } from "@/lib/time";
@@ -8,22 +8,53 @@ import { formatRelative } from "@/lib/time";
 interface CommentItemProps {
   comment: Comment;
   depth?: number;
+  meUsername?: string;
   onReply?: (commentId: string, content: string) => void;
   onLike?: (commentId: string) => void;
+  onDelete?: (comment: Comment) => void;
 }
 
 export function CommentItem({
   comment,
   depth = 0,
+  meUsername,
   onReply,
   onLike,
+  onDelete,
 }: CommentItemProps) {
   const [replying, setReplying] = useState(false);
   const [replyText, setReplyText] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const isMine = Boolean(meUsername) && comment.author.username === meUsername;
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onOutside);
+    return () => document.removeEventListener("mousedown", onOutside);
+  }, [menuOpen]);
+
+  // Replies are flat under their top-level comment. Replying to a reply targets
+  // that same parent comment (with an @mention), instead of nesting deeper.
+  const isReply = depth > 0;
+  const targetCommentId = isReply ? comment.parentId ?? comment.id : comment.id;
+
+  function openReply() {
+    setReplying((v) => {
+      const next = !v;
+      if (next && isReply) setReplyText(`@${comment.author.username} `);
+      return next;
+    });
+  }
 
   function submitReply() {
     if (!replyText.trim()) return;
-    onReply?.(comment.id, replyText.trim());
+    onReply?.(targetCommentId, replyText.trim());
     setReplyText("");
     setReplying(false);
   }
@@ -53,7 +84,7 @@ export function CommentItem({
         <div className="flex-1 min-w-0">
           {/* Bubble */}
           <div
-            className="px-3 py-2.5"
+            className="relative px-3 py-2.5"
             style={{
               background: "var(--surface)",
               borderRadius: 18,
@@ -61,7 +92,7 @@ export function CommentItem({
               boxShadow: "var(--card-shadow)",
             }}
           >
-            <div className="flex items-center gap-1.5 mb-0.5">
+            <div className="flex items-center gap-1.5 mb-0.5 pr-5">
               <span
                 className="font-display font-bold text-[13.5px]"
                 style={{ color: "var(--text)" }}
@@ -72,6 +103,37 @@ export function CommentItem({
                 · {formatRelative(comment.createdAt)}
               </span>
             </div>
+
+            {/* Kebab menu (own comments only) */}
+            {isMine && onDelete && (
+              <div ref={menuRef} className="absolute top-1.5 right-2">
+                <button
+                  onClick={() => setMenuOpen((o) => !o)}
+                  className="w-7 h-7 flex items-center justify-center rounded-full transition-colors hover:bg-[var(--surface-2)]"
+                  aria-label="Options du commentaire"
+                >
+                  <Icon name="more" size={16} color="var(--text-faint)" />
+                </button>
+                {menuOpen && (
+                  <div
+                    className="absolute right-0 top-8 z-20 rounded-[14px] overflow-hidden py-1 min-w-[150px]"
+                    style={{ background: "var(--surface)", boxShadow: "var(--card-shadow), inset 0 0 0 1px var(--border)" }}
+                  >
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        onDelete(comment);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[13.5px] font-semibold transition-colors hover:bg-[var(--surface-2)]"
+                      style={{ color: "var(--like)" }}
+                    >
+                      <Icon name="trash" size={15} color="currentColor" />
+                      Supprimer
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
             <p
               className="text-[14.5px] leading-snug"
               style={{ color: "var(--text)", textWrap: "pretty" } as React.CSSProperties}
@@ -88,9 +150,9 @@ export function CommentItem({
               onToggle={() => onLike?.(comment.id)}
               size={15}
             />
-            {depth === 0 && (
+            {onReply && (
               <button
-                onClick={() => setReplying((v) => !v)}
+                onClick={openReply}
                 className="text-[12.5px] font-bold"
                 style={{ color: "var(--text-muted)" }}
               >
@@ -132,8 +194,10 @@ export function CommentItem({
               <CommentItem
                 comment={reply}
                 depth={depth + 1}
+                meUsername={meUsername}
                 onLike={onLike}
                 onReply={onReply}
+                onDelete={onDelete}
               />
             </div>
           ))}

@@ -1,19 +1,28 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useEffect, useRef, Suspense } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Avatar, Icon, LikeButton } from '@/components/ui';
 import { CommentItem } from '@/features/comments/CommentItem';
 import { getPost, likePost, unlikePost, deletePost, updatePost } from '@/features/posts/posts.api';
-import { getComments, addComment } from '@/features/comments/comments.api';
+import {
+  getComments,
+  addComment,
+  addReply,
+  deleteComment,
+  deleteReply,
+  likeComment,
+  unlikeComment,
+} from '@/features/comments/comments.api';
 import { useAuth } from '@/hooks/use-auth';
 import { formatRelative } from '@/lib/time';
 import type { Post, Comment } from '@/types';
 
-export function PostDetail() {
+function PostDetailInner() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user: me } = useAuth();
 
   const [post, setPost] = useState<Post | null>(null);
@@ -49,6 +58,13 @@ export function PostDetail() {
       })
       .finally(() => setLoading(false));
   }, [id]);
+
+  // Arriving from a post's comment icon (?compose=1): focus the comment box.
+  useEffect(() => {
+    if (loading || searchParams.get('compose') !== '1') return;
+    inputRef.current?.focus();
+    inputRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [loading, searchParams]);
 
   function handleLike() {
     if (!post) return;
@@ -95,18 +111,75 @@ export function PostDetail() {
     }
   }
 
-  function handleLikeComment(commentId: string) {
+  async function handleAddReply(commentId: string, content: string) {
+    const created = await addReply(commentId, content);
     setComments((prev) =>
-      prev.map((c) =>
-        c.id === commentId
-          ? {
-              ...c,
-              isLiked: !c.isLiked,
-              likeCount: c.isLiked ? c.likeCount - 1 : c.likeCount + 1,
-            }
-          : c
+      prev.map((cm) =>
+        cm.id === commentId
+          ? { ...cm, replies: [...(cm.replies ?? []), created as unknown as Comment] }
+          : cm
       )
     );
+    // A reply also counts as a response to the post.
+    setPost((p) => (p ? { ...p, commentsCount: p.commentsCount + 1 } : p));
+  }
+
+  async function handleDeleteComment(comment: Comment) {
+    const isReply = Boolean(comment.parentId);
+    // Deleting a comment also removes its replies; the counter covers both.
+    const removed = isReply ? 1 : 1 + (comment.replies?.length ?? 0);
+    setComments((prev) => {
+      if (isReply) {
+        return prev.map((cm) =>
+          cm.id === comment.parentId
+            ? { ...cm, replies: (cm.replies ?? []).filter((r) => r.id !== comment.id) }
+            : cm
+        );
+      }
+      return prev.filter((cm) => cm.id !== comment.id);
+    });
+    setPost((p) => (p ? { ...p, commentsCount: Math.max(0, p.commentsCount - removed) } : p));
+    try {
+      if (isReply) {
+        await deleteReply(comment.parentId!, comment.id);
+      } else if (post) {
+        await deleteComment(post.id, comment.id);
+      }
+    } catch {
+      if (id) getComments(id).then(setComments).catch(() => {});
+    }
+  }
+
+  function handleLikeComment(targetId: string) {
+    let wasLiked: boolean | null = null;
+    for (const c of comments) {
+      if (c.id === targetId) wasLiked = c.isLiked;
+      else for (const r of c.replies ?? []) if (r.id === targetId) wasLiked = r.isLiked;
+    }
+    if (wasLiked === null) return;
+
+    const setLiked = (liked: boolean) =>
+      setComments((prev) =>
+        prev.map((c) => {
+          if (c.id === targetId) {
+            return { ...c, isLiked: liked, likeCount: liked ? c.likeCount + 1 : c.likeCount - 1 };
+          }
+          if (c.replies?.some((r) => r.id === targetId)) {
+            return {
+              ...c,
+              replies: c.replies.map((r) =>
+                r.id === targetId
+                  ? { ...r, isLiked: liked, likeCount: liked ? r.likeCount + 1 : r.likeCount - 1 }
+                  : r
+              ),
+            };
+          }
+          return c;
+        })
+      );
+
+    setLiked(!wasLiked);
+    (wasLiked ? unlikeComment : likeComment)(targetId).catch(() => setLiked(wasLiked));
   }
 
   if (loading || !post) {
@@ -118,7 +191,8 @@ export function PostDetail() {
   }
 
   const { author } = post;
-  const totalComments = comments.length;
+  // Total responses (top-level comments + replies) — matches the feed card count.
+  const totalComments = post.commentsCount;
 
   return (
     <div className="flex flex-col min-h-svh">
@@ -322,31 +396,10 @@ export function PostDetail() {
               <CommentItem
                 key={c.id}
                 comment={c}
+                meUsername={me?.username}
                 onLike={handleLikeComment}
-                onReply={(commentId, content) => {
-                  setComments((prev) =>
-                    prev.map((cm) =>
-                      cm.id === commentId
-                        ? {
-                            ...cm,
-                            replies: [
-                              ...(cm.replies ?? []),
-                              {
-                                id: crypto.randomUUID(),
-                                content,
-                                author: me!,
-                                postId: post.id,
-                                parentId: commentId,
-                                likeCount: 0,
-                                isLiked: false,
-                                createdAt: new Date().toISOString(),
-                              },
-                            ],
-                          }
-                        : cm
-                    )
-                  );
-                }}
+                onReply={handleAddReply}
+                onDelete={handleDeleteComment}
               />
             ))}
           </div>
@@ -391,5 +444,19 @@ export function PostDetail() {
         </button>
       </div>
     </div>
+  );
+}
+
+export function PostDetail() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex justify-center py-16">
+          <span className="w-8 h-8 rounded-full border-[3px] border-primary border-t-transparent animate-spin block" />
+        </div>
+      }
+    >
+      <PostDetailInner />
+    </Suspense>
   );
 }
