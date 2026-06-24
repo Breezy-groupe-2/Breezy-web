@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Avatar, Icon } from "@/components/ui";
 import { PostCard } from "@/features/posts/PostCard";
 import { getProfile, updateProfile } from "@/features/profile/profile.api";
 import { getUserPosts, likePost, unlikePost } from "@/features/posts/posts.api";
-import { followUser, unfollowUser } from "@/features/users/users.api";
 import { useAuth } from "@/hooks/use-auth";
+import { useFollow } from "@/store/follow-context";
 import type { User, Post } from "@/types";
 
 type Tab = "posts" | "media" | "likes";
@@ -20,14 +20,16 @@ export default function ProfilePage() {
   const resolvedUsername = username === "me" ? me?.username ?? "" : username;
   const isMe = resolvedUsername === me?.username;
 
+  const { isFollowing, toggle, ready: followReady } = useFollow();
+
   const [profile, setProfile] = useState<User | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [tab, setTab] = useState<Tab>("posts");
-  const [following, setFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [editName, setEditName] = useState("");
   const [editBio, setEditBio] = useState("");
+  const [editAvatar, setEditAvatar] = useState("");
 
   useEffect(() => {
     if (!resolvedUsername) return;
@@ -40,24 +42,36 @@ export default function ProfilePage() {
         setPosts(userPosts);
         setEditName(prof.displayName);
         setEditBio(prof.bio ?? "");
+        setEditAvatar(prof.avatarUrl ?? "");
       })
       .finally(() => setLoading(false));
   }, [resolvedUsername]);
 
-  function handleFollow() {
-    if (!profile) return;
-    const willFollow = !following;
-    setFollowing(willFollow);
-    setProfile((p) =>
-      p ? { ...p, followersCount: p.followersCount + (willFollow ? 1 : -1) } : p
-    );
-    (willFollow ? followUser : unfollowUser)(profile.username).catch(() => {
-      setFollowing(!willFollow);
+  // Live follower-count sync: the follow state is owned by FollowContext (shared
+  // with the suggestions rail), so following from anywhere must move this
+  // profile's counter. We keep a baseline of the follow state that the fetched
+  // count already reflects, and apply ±1 whenever it changes.
+  const followed = profile && !isMe ? isFollowing(profile.username) : false;
+  const baselineFollowedRef = useRef<boolean | null>(null);
+
+  useEffect(() => {
+    baselineFollowedRef.current = null;
+  }, [resolvedUsername]);
+
+  useEffect(() => {
+    if (!profile || isMe || !followReady) return;
+    if (baselineFollowedRef.current === null) {
+      // The fetched followersCount already includes (or not) the current user.
+      baselineFollowedRef.current = followed;
+      return;
+    }
+    if (baselineFollowedRef.current !== followed) {
+      baselineFollowedRef.current = followed;
       setProfile((p) =>
-        p ? { ...p, followersCount: p.followersCount + (willFollow ? -1 : 1) } : p
+        p ? { ...p, followersCount: Math.max(0, p.followersCount + (followed ? 1 : -1)) } : p
       );
-    });
-  }
+    }
+  }, [followed, followReady, isMe, profile, resolvedUsername]);
 
   function handleLike(id: string) {
     let wasLiked = false;
@@ -82,7 +96,11 @@ export default function ProfilePage() {
   }
 
   async function saveProfile() {
-    const updated = await updateProfile({ displayName: editName, bio: editBio });
+    const updated = await updateProfile({
+      displayName: editName,
+      bio: editBio,
+      avatarUrl: editAvatar.trim(),
+    });
     setProfile(updated);
     setEditOpen(false);
   }
@@ -171,15 +189,15 @@ export default function ProfilePage() {
               </button>
             ) : (
               <button
-                onClick={handleFollow}
+                onClick={() => toggle(profile.username)}
                 className="h-9 px-5 rounded-full text-[14px] font-bold transition-colors"
                 style={
-                  following
+                  followed
                     ? { background: "var(--surface-2)", color: "var(--text)" }
                     : { background: "var(--primary)", color: "var(--on-primary)" }
                 }
               >
-                {following ? "Abonné·e" : "Suivre"}
+                {followed ? "Abonné·e" : "Suivre"}
               </button>
             )}
           </div>
@@ -326,7 +344,7 @@ export default function ProfilePage() {
             </div>
             <div className="flex justify-center py-4">
               <div className="relative">
-                <Avatar displayName={profile.displayName} size={84} />
+                <Avatar displayName={editName || profile.displayName} src={editAvatar.trim() || null} size={84} />
                 <div
                   className="absolute -right-1 -bottom-1 w-8 h-8 flex items-center justify-center rounded-full"
                   style={{
@@ -363,6 +381,22 @@ export default function ProfilePage() {
                   onChange={(e) => setEditBio(e.target.value)}
                   rows={3}
                   className="w-full px-4 py-3 rounded-[16px] border-none outline-none resize-none text-[15px] leading-snug font-sans"
+                  style={{
+                    background: "var(--surface)",
+                    boxShadow: "inset 0 0 0 1.5px var(--border)",
+                    color: "var(--text)",
+                  }}
+                />
+              </div>
+              <div>
+                <label className="block text-[13.5px] font-bold mb-1.5 ml-1" style={{ color: "var(--text-muted)" }}>
+                  Photo de profil (URL, optionnel)
+                </label>
+                <input
+                  value={editAvatar}
+                  onChange={(e) => setEditAvatar(e.target.value)}
+                  placeholder="https://… (laisser vide = initiale)"
+                  className="w-full h-[52px] px-4 rounded-[16px] border-none outline-none text-[15.5px]"
                   style={{
                     background: "var(--surface)",
                     boxShadow: "inset 0 0 0 1.5px var(--border)",
