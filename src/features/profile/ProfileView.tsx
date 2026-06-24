@@ -163,24 +163,40 @@ export function ProfileView() {
     };
   }, [tab, likedLoaded, resolvedUsername]);
 
+  // Reflect a like-state change on a post wherever it appears on this page
+  // (the Posts/Media tab shares the `posts` list with what's shown in Likes).
+  function setLikedState(id: string, liked: boolean) {
+    const apply = (p: Post): Post =>
+      p.id === id
+        ? { ...p, isLiked: liked, likeCount: Math.max(0, p.likeCount + (liked ? 1 : -1)) }
+        : p;
+    setPosts((prev) => prev.map(apply));
+  }
+
   function handleLikeLiked(id: string) {
     const target = likedPosts.find((p) => p.id === id);
     if (!target) return;
     if (target.isLiked) {
-      // Unliking from the Likes tab: drop the card right away.
+      // Unliking from the Likes tab: drop the card and unlike everywhere.
       const snapshot = likedPosts;
       setLikedPosts((prev) => prev.filter((p) => p.id !== id));
-      unlikePost(id).catch(() => setLikedPosts(snapshot));
+      setLikedState(id, false);
+      unlikePost(id).catch(() => {
+        setLikedPosts(snapshot);
+        setLikedState(id, true);
+      });
     } else {
       // Re-liking a card still on screen: restore its liked state.
       setLikedPosts((prev) =>
         prev.map((p) => (p.id === id ? { ...p, isLiked: true, likeCount: p.likeCount + 1 } : p))
       );
-      likePost(id).catch(() =>
+      setLikedState(id, true);
+      likePost(id).catch(() => {
         setLikedPosts((prev) =>
           prev.map((p) => (p.id === id ? { ...p, isLiked: false, likeCount: p.likeCount - 1 } : p))
-        )
-      );
+        );
+        setLikedState(id, false);
+      });
     }
   }
 
