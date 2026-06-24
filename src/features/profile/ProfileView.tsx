@@ -13,7 +13,10 @@ import {
   unlikePost,
   deletePost,
   updatePost,
+  repostPost,
+  unrepostPost,
 } from "@/features/posts/posts.api";
+import { applyRepostToggle, findPostInTree } from "@/features/posts/post-mutations";
 import { uploadMedia } from "@/features/media/media.api";
 import { useAuth } from "@/hooks/use-auth";
 import { useFollow } from "@/store/follow-context";
@@ -136,6 +139,19 @@ export function ProfileView() {
   async function handleUpdate(id: string, newContent: string) {
     const updated = await updatePost(id, newContent);
     setPosts((prev) => prev.map((p) => (p.id === id ? updated : p)));
+  }
+
+  function handleRepost(id: string) {
+    const target = findPostInTree(posts, id);
+    const wasReposted = target?.isReposted ?? false;
+    setPosts((prev) => applyRepostToggle(prev, id, !wasReposted));
+    (wasReposted ? unrepostPost : repostPost)(id).catch(() =>
+      setPosts((prev) => applyRepostToggle(prev, id, wasReposted))
+    );
+  }
+
+  function handleQuoted(created: Post) {
+    if (isMe) setPosts((prev) => [created, ...prev]);
   }
 
   useEffect(() => {
@@ -453,6 +469,8 @@ export function ProfileView() {
               post={post}
               isOwn={post.author.username === me?.username}
               onLike={handleLike}
+              onRepost={handleRepost}
+              onQuoted={handleQuoted}
               onDelete={handleDelete}
               onUpdate={handleUpdate}
             />

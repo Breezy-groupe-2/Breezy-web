@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { Avatar, Icon, LikeButton } from '@/components/ui';
 import { CommentComposerModal } from '@/features/comments/CommentComposerModal';
+import { QuoteComposerModal } from '@/features/posts/QuoteComposerModal';
+import { QuotedCard } from '@/features/posts/QuotedCard';
 import type { Post } from '@/types';
 import { formatRelative } from '@/lib/time';
 
@@ -11,6 +13,8 @@ interface PostCardProps {
   post: Post;
   isOwn?: boolean;
   onLike?: (id: string) => void;
+  onRepost?: (id: string) => void;
+  onQuoted?: (created: Post) => void;
   onDelete?: (id: string) => void;
   onUpdate?: (id: string, newContent: string) => void;
   flat?: boolean;
@@ -20,40 +24,53 @@ export function PostCard({
   post,
   isOwn = false,
   onLike,
+  onRepost,
+  onQuoted,
   onDelete,
   onUpdate,
   flat = false,
 }: PostCardProps) {
-  const { author } = post;
+  // A plain repost (no quote text) shows the original post with a "reposted by"
+  // label; a quote repost is a normal post that embeds the quoted one.
+  const isPlainRepost = !!post.repostOf && !post.content;
+  const display = isPlainRepost ? (post.repostOf as Post) : post;
+  const reposter = isPlainRepost ? post.author : null;
+  const quoted = display.repostOf ?? null;
+  const author = display.author;
+
   const [menuOpen, setMenuOpen] = useState(false);
+  const [repostMenuOpen, setRepostMenuOpen] = useState(false);
+  const [quoteOpen, setQuoteOpen] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [editText, setEditText] = useState(post.content);
+  const [editText, setEditText] = useState(display.content);
   const [saving, setSaving] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
   const [commentBump, setCommentBump] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
+  const repostMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!menuOpen) return;
+    if (!menuOpen && !repostMenuOpen) return;
     function onOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+      if (repostMenuRef.current && !repostMenuRef.current.contains(e.target as Node)) {
+        setRepostMenuOpen(false);
       }
     }
     document.addEventListener('mousedown', onOutside);
     return () => document.removeEventListener('mousedown', onOutside);
-  }, [menuOpen]);
+  }, [menuOpen, repostMenuOpen]);
 
   async function saveEdit() {
     const trimmed = editText.trim();
-    if (!trimmed || trimmed === post.content) {
+    if (!trimmed || trimmed === display.content) {
       setEditing(false);
-      setEditText(post.content);
+      setEditText(display.content);
       return;
     }
     setSaving(true);
     try {
-      await onUpdate?.(post.id, trimmed);
+      await onUpdate?.(display.id, trimmed);
       setEditing(false);
     } catch {
       // API call failed; stay in edit mode so user can retry
@@ -64,8 +81,10 @@ export function PostCard({
 
   function cancelEdit() {
     setEditing(false);
-    setEditText(post.content);
+    setEditText(display.content);
   }
+
+  const canEdit = isOwn && !isPlainRepost;
 
   return (
     <article
@@ -81,6 +100,19 @@ export function PostCard({
             }
       }
     >
+      {/* "Reposted by" label for plain reposts */}
+      {reposter && (
+        <Link
+          href={`/profile/${reposter.username}`}
+          onClick={(e) => e.stopPropagation()}
+          className="flex items-center gap-2 mb-2 ml-1 text-[13px] font-semibold hover:underline"
+          style={{ color: 'var(--text-faint)' }}
+        >
+          <Icon name="repost" size={14} color="var(--text-faint)" />
+          {reposter.displayName} a reposté
+        </Link>
+      )}
+
       <div className="flex gap-3">
         <Link href={`/profile/${author.username}`} onClick={(e) => e.stopPropagation()}>
           <Avatar displayName={author.displayName} src={author.avatarUrl} size={44} />
@@ -97,29 +129,23 @@ export function PostCard({
             >
               {author.displayName}
             </Link>
-            <span
-              className="text-[13.5px] whitespace-nowrap"
-              style={{ color: 'var(--text-faint)' }}
-            >
+            <span className="text-[13.5px] whitespace-nowrap" style={{ color: 'var(--text-faint)' }}>
               @{author.username}
             </span>
             <span className="text-[13.5px]" style={{ color: 'var(--text-faint)' }}>
               ·
             </span>
-            <span
-              className="text-[13.5px] whitespace-nowrap"
-              style={{ color: 'var(--text-faint)' }}
-            >
-              {formatRelative(post.createdAt)}
+            <span className="text-[13.5px] whitespace-nowrap" style={{ color: 'var(--text-faint)' }}>
+              {formatRelative(display.createdAt)}
             </span>
 
-            {/* More menu — only interactive when isOwn */}
+            {/* More menu — only interactive when the displayed post is the viewer's own */}
             <span className="ml-auto relative" ref={menuRef}>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
-                  if (isOwn) setMenuOpen((o) => !o);
+                  if (canEdit) setMenuOpen((o) => !o);
                 }}
                 className="flex p-1 -m-1 rounded-full"
                 aria-label="Options"
@@ -127,7 +153,7 @@ export function PostCard({
                 <Icon name="more" size={18} color="var(--text-faint)" />
               </button>
 
-              {isOwn && menuOpen && (
+              {canEdit && menuOpen && (
                 <div
                   className="absolute right-0 top-6 w-[170px] rounded-[14px] border overflow-hidden z-20"
                   style={{
@@ -155,7 +181,7 @@ export function PostCard({
                     onClick={(e) => {
                       e.stopPropagation();
                       setMenuOpen(false);
-                      onDelete?.(post.id);
+                      onDelete?.(display.id);
                     }}
                     className="flex items-center gap-3 w-full px-4 py-3 text-[14px] font-semibold text-red-500 transition-colors hover:bg-red-50"
                   >
@@ -185,9 +211,7 @@ export function PostCard({
               >
                 <span
                   className="text-[12px] font-semibold"
-                  style={{
-                    color: 280 - editText.length < 20 ? 'var(--like)' : 'var(--text-faint)',
-                  }}
+                  style={{ color: 280 - editText.length < 20 ? 'var(--like)' : 'var(--text-faint)' }}
                 >
                   {280 - editText.length}
                 </span>
@@ -211,16 +235,19 @@ export function PostCard({
               </div>
             </div>
           ) : (
-            <Link href={`/post/${post.id}`}>
-              <p
-                className="text-[15.5px] leading-relaxed whitespace-pre-wrap"
-                style={{ color: 'var(--text)', textWrap: 'pretty' } as React.CSSProperties}
-              >
-                {post.content}
-              </p>
-              {post.mediaUrl && (
+            <Link href={`/post/${display.id}`}>
+              {display.content && (
+                <p
+                  className="text-[15.5px] leading-relaxed whitespace-pre-wrap"
+                  style={{ color: 'var(--text)', textWrap: 'pretty' } as React.CSSProperties}
+                >
+                  {display.content}
+                </p>
+              )}
+              {display.mediaUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={post.mediaUrl}
+                  src={display.mediaUrl}
                   alt="media"
                   className="mt-2 w-full rounded-[14px] object-cover"
                   style={{ maxHeight: 300 }}
@@ -228,6 +255,10 @@ export function PostCard({
               )}
             </Link>
           )}
+
+          {/* Embedded quoted post (quote repost) — kept outside the post link to
+              avoid a nested <a> */}
+          {!editing && quoted && <QuotedCard post={quoted} />}
 
           {/* Actions */}
           {!editing && (
@@ -243,19 +274,77 @@ export function PostCard({
                 aria-label="Commenter"
               >
                 <Icon name="comment" size={20} stroke={1.9} />
-                {post.commentsCount + commentBump}
+                {display.commentsCount + commentBump}
               </button>
-              <button
-                onClick={(e) => e.stopPropagation()}
-                className="flex items-center gap-1.5 px-0.5 py-1 rounded-full text-[13.5px] font-semibold"
-                style={{ color: 'var(--text-faint)' }}
-              >
-                <Icon name="repost" size={20} stroke={1.9} />
-              </button>
+
+              {/* Repost button + menu */}
+              <span className="relative" ref={repostMenuRef}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    setRepostMenuOpen((o) => !o);
+                  }}
+                  className="flex items-center gap-1.5 px-0.5 py-1 rounded-full text-[13.5px] font-semibold transition-colors"
+                  style={{ color: display.isReposted ? 'var(--repost, #00ba7c)' : 'var(--text-faint)' }}
+                  aria-label="Reposter"
+                >
+                  <Icon
+                    name="repost"
+                    size={20}
+                    stroke={1.9}
+                    color={display.isReposted ? 'var(--repost, #00ba7c)' : 'currentColor'}
+                  />
+                  {display.repostCount > 0 && display.repostCount}
+                </button>
+                {repostMenuOpen && (
+                  <div
+                    className="absolute left-0 top-7 w-[180px] rounded-[14px] border overflow-hidden z-20"
+                    style={{
+                      background: 'var(--surface)',
+                      borderColor: 'var(--border)',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
+                    }}
+                  >
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        setRepostMenuOpen(false);
+                        onRepost?.(display.id);
+                      }}
+                      className="flex items-center gap-3 w-full px-4 py-3 text-[14px] font-semibold"
+                      style={{ color: 'var(--text)' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-2)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <Icon name="repost" size={16} color="var(--text)" />
+                      {display.isReposted ? 'Annuler le repost' : 'Reposter'}
+                    </button>
+                    <div className="border-t" style={{ borderColor: 'var(--border)' }} />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        setRepostMenuOpen(false);
+                        setQuoteOpen(true);
+                      }}
+                      className="flex items-center gap-3 w-full px-4 py-3 text-[14px] font-semibold"
+                      style={{ color: 'var(--text)' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-2)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <Icon name="edit" size={16} color="var(--text)" />
+                      Citer
+                    </button>
+                  </div>
+                )}
+              </span>
+
               <LikeButton
-                liked={post.isLiked}
-                count={post.likeCount}
-                onToggle={() => onLike?.(post.id)}
+                liked={display.isLiked}
+                count={display.likeCount}
+                onToggle={() => onLike?.(display.id)}
               />
               <button
                 onClick={(e) => e.stopPropagation()}
@@ -271,9 +360,17 @@ export function PostCard({
 
       {composerOpen && (
         <CommentComposerModal
-          post={post}
+          post={display}
           onClose={() => setComposerOpen(false)}
           onSubmitted={() => setCommentBump((b) => b + 1)}
+        />
+      )}
+
+      {quoteOpen && (
+        <QuoteComposerModal
+          post={display}
+          onClose={() => setQuoteOpen(false)}
+          onQuoted={(created) => onQuoted?.(created)}
         />
       )}
     </article>

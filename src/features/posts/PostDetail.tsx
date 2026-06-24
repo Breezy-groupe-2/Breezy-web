@@ -5,7 +5,17 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Avatar, Icon, LikeButton } from '@/components/ui';
 import { CommentItem } from '@/features/comments/CommentItem';
-import { getPost, likePost, unlikePost, deletePost, updatePost } from '@/features/posts/posts.api';
+import {
+  getPost,
+  likePost,
+  unlikePost,
+  deletePost,
+  updatePost,
+  repostPost,
+  unrepostPost,
+} from '@/features/posts/posts.api';
+import { QuoteComposerModal } from '@/features/posts/QuoteComposerModal';
+import { QuotedCard } from '@/features/posts/QuotedCard';
 import {
   getComments,
   addComment,
@@ -31,10 +41,13 @@ function PostDetailInner() {
   const [commentText, setCommentText] = useState('');
   const [sending, setSending] = useState(false);
   const [postMenuOpen, setPostMenuOpen] = useState(false);
+  const [repostMenuOpen, setRepostMenuOpen] = useState(false);
+  const [quoteOpen, setQuoteOpen] = useState(false);
   const [editingPost, setEditingPost] = useState(false);
   const [editPostText, setEditPostText] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const postMenuRef = useRef<HTMLDivElement>(null);
+  const repostMenuRef = useRef<HTMLDivElement>(null);
 
   const isOwn = post?.author.username === me?.username;
 
@@ -76,6 +89,42 @@ function PostDetailInner() {
     );
     (wasLiked ? unlikePost : likePost)(post.id);
   }
+
+  function handleRepost() {
+    if (!post) return;
+    const wasReposted = post.isReposted;
+    setPost((p) =>
+      p
+        ? {
+            ...p,
+            isReposted: !wasReposted,
+            repostCount: wasReposted ? p.repostCount - 1 : p.repostCount + 1,
+          }
+        : p
+    );
+    (wasReposted ? unrepostPost : repostPost)(post.id).catch(() =>
+      setPost((p) =>
+        p
+          ? {
+              ...p,
+              isReposted: wasReposted,
+              repostCount: wasReposted ? p.repostCount + 1 : p.repostCount - 1,
+            }
+          : p
+      )
+    );
+  }
+
+  useEffect(() => {
+    if (!repostMenuOpen) return;
+    function onOutside(e: MouseEvent) {
+      if (repostMenuRef.current && !repostMenuRef.current.contains(e.target as Node)) {
+        setRepostMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', onOutside);
+    return () => document.removeEventListener('mousedown', onOutside);
+  }, [repostMenuOpen]);
 
   async function handleAddComment() {
     if (!post || !commentText.trim() || sending) return;
@@ -333,6 +382,11 @@ function PostDetailInner() {
                   style={{ maxHeight: 400 }}
                 />
               )}
+              {post.repostOf && (
+                <div className="mb-3">
+                  <QuotedCard post={post.repostOf} />
+                </div>
+              )}
             </>
           )}
 
@@ -371,9 +425,55 @@ function PostDetailInner() {
             <button style={{ color: 'var(--text-faint)' }}>
               <Icon name="comment" size={22} />
             </button>
-            <button style={{ color: 'var(--text-faint)' }}>
-              <Icon name="repost" size={22} />
-            </button>
+            <span className="relative" ref={repostMenuRef}>
+              <button
+                onClick={() => setRepostMenuOpen((o) => !o)}
+                className="flex items-center gap-1.5 text-[14px] font-semibold"
+                style={{ color: post.isReposted ? 'var(--repost, #00ba7c)' : 'var(--text-faint)' }}
+                aria-label="Reposter"
+              >
+                <Icon
+                  name="repost"
+                  size={22}
+                  color={post.isReposted ? 'var(--repost, #00ba7c)' : 'currentColor'}
+                />
+                {post.repostCount > 0 && post.repostCount}
+              </button>
+              {repostMenuOpen && (
+                <div
+                  className="absolute left-1/2 -translate-x-1/2 top-9 w-[180px] rounded-[14px] border overflow-hidden z-20"
+                  style={{
+                    background: 'var(--surface)',
+                    borderColor: 'var(--border)',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
+                  }}
+                >
+                  <button
+                    onClick={() => {
+                      setRepostMenuOpen(false);
+                      handleRepost();
+                    }}
+                    className="flex items-center gap-3 w-full px-4 py-3 text-[14px] font-semibold"
+                    style={{ color: 'var(--text)' }}
+                  >
+                    <Icon name="repost" size={16} color="var(--text)" />
+                    {post.isReposted ? 'Annuler le repost' : 'Reposter'}
+                  </button>
+                  <div className="border-t" style={{ borderColor: 'var(--border)' }} />
+                  <button
+                    onClick={() => {
+                      setRepostMenuOpen(false);
+                      setQuoteOpen(true);
+                    }}
+                    className="flex items-center gap-3 w-full px-4 py-3 text-[14px] font-semibold"
+                    style={{ color: 'var(--text)' }}
+                  >
+                    <Icon name="edit" size={16} color="var(--text)" />
+                    Citer
+                  </button>
+                </div>
+              )}
+            </span>
             <LikeButton
               liked={post.isLiked}
               count={post.likeCount}
@@ -443,6 +543,14 @@ function PostDetailInner() {
           )}
         </button>
       </div>
+
+      {quoteOpen && post && (
+        <QuoteComposerModal
+          post={post}
+          onClose={() => setQuoteOpen(false)}
+          onQuoted={(created) => router.push(`/post/${created.id}`)}
+        />
+      )}
     </div>
   );
 }
