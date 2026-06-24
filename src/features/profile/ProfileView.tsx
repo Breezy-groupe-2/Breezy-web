@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Avatar, Icon } from "@/components/ui";
 import { PostCard } from "@/features/posts/PostCard";
@@ -414,24 +415,26 @@ export function ProfileView() {
             </p>
           )}
           <div className="flex gap-5 mt-3">
-            <span className="text-[14px]" style={{ color: "var(--text-muted)" }}>
-              <b
-                className="font-display font-bold"
-                style={{ color: "var(--text)" }}
-              >
+            <Link
+              href={`/profile/${profile.username}/following`}
+              className="text-[14px] hover:underline"
+              style={{ color: "var(--text-muted)" }}
+            >
+              <b className="font-display font-bold" style={{ color: "var(--text)" }}>
                 {profile.followingCount.toLocaleString("fr")}
               </b>{" "}
               abonnements
-            </span>
-            <span className="text-[14px]" style={{ color: "var(--text-muted)" }}>
-              <b
-                className="font-display font-bold"
-                style={{ color: "var(--text)" }}
-              >
+            </Link>
+            <Link
+              href={`/profile/${profile.username}/followers`}
+              className="text-[14px] hover:underline"
+              style={{ color: "var(--text-muted)" }}
+            >
+              <b className="font-display font-bold" style={{ color: "var(--text)" }}>
                 {profile.followersCount.toLocaleString("fr")}
               </b>{" "}
               abonnés
-            </span>
+            </Link>
           </div>
         </div>
 
