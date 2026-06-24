@@ -13,6 +13,7 @@ import {
   deletePost,
   updatePost,
 } from "@/features/posts/posts.api";
+import { uploadMedia } from "@/features/media/media.api";
 import { useAuth } from "@/hooks/use-auth";
 import { useFollow } from "@/store/follow-context";
 import { useCompose } from "@/store/compose-context";
@@ -39,9 +40,14 @@ export function ProfileView() {
   const [editName, setEditName] = useState("");
   const [editBio, setEditBio] = useState("");
   const [editAvatar, setEditAvatar] = useState("");
+  const [editBanner, setEditBanner] = useState("");
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [bannerUploading, setBannerUploading] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [shareToast, setShareToast] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const avatarFileRef = useRef<HTMLInputElement>(null);
+  const bannerFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!resolvedUsername) return;
@@ -55,6 +61,7 @@ export function ProfileView() {
         setEditName(prof.displayName);
         setEditBio(prof.bio ?? "");
         setEditAvatar(prof.avatarUrl ?? "");
+        setEditBanner(prof.bannerUrl ?? "");
       })
       .finally(() => setLoading(false));
   }, [resolvedUsername]);
@@ -155,11 +162,42 @@ export function ProfileView() {
     window.alert("Signalement transmis à la modération. Merci.");
   }
 
+  async function handleAvatarFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarUploading(true);
+    try {
+      const { url } = await uploadMedia(file);
+      setEditAvatar(url);
+    } catch {
+      // keep the previous value on failure
+    } finally {
+      setAvatarUploading(false);
+      if (avatarFileRef.current) avatarFileRef.current.value = "";
+    }
+  }
+
+  async function handleBannerFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBannerUploading(true);
+    try {
+      const { url } = await uploadMedia(file);
+      setEditBanner(url);
+    } catch {
+      // keep the previous value on failure
+    } finally {
+      setBannerUploading(false);
+      if (bannerFileRef.current) bannerFileRef.current.value = "";
+    }
+  }
+
   async function saveProfile() {
     const updated = await updateProfile({
       displayName: editName,
       bio: editBio,
       avatarUrl: editAvatar.trim(),
+      bannerUrl: editBanner.trim(),
     });
     setProfile(updated);
     setEditOpen(false);
@@ -198,6 +236,15 @@ export function ProfileView() {
           background: `linear-gradient(140deg, ${bannerFrom}, ${bannerTo})`,
         }}
       >
+        {/* Uploaded banner image overrides the generated gradient when present. */}
+        {profile.bannerUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={profile.bannerUrl}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        )}
         <div
           className="absolute inset-0"
           style={{
@@ -454,20 +501,74 @@ export function ProfileView() {
                 OK
               </button>
             </div>
-            <div className="flex justify-center py-4">
-              <div className="relative">
-                <Avatar displayName={editName || profile.displayName} src={editAvatar.trim() || null} size={84} />
+            {/* Banner + avatar uploader (tap to pick a file) */}
+            <div className="px-5 pt-1">
+              <button
+                type="button"
+                onClick={() => bannerFileRef.current?.click()}
+                className="relative block w-full h-[110px] rounded-[18px] overflow-hidden"
+                style={{ background: `linear-gradient(140deg, ${bannerFrom}, ${bannerTo})` }}
+              >
+                {editBanner.trim() && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={editBanner.trim()}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                )}
                 <div
-                  className="absolute -right-1 -bottom-1 w-8 h-8 flex items-center justify-center rounded-full"
-                  style={{
-                    background: "var(--primary)",
-                    boxShadow: "0 0 0 3px var(--bg)",
-                  }}
+                  className="absolute inset-0 flex items-center justify-center"
+                  style={{ background: "rgba(0,0,0,0.28)" }}
                 >
-                  <Icon name="image" size={16} color="var(--on-primary)" />
+                  {bannerUploading ? (
+                    <span className="w-6 h-6 rounded-full border-[3px] border-white border-t-transparent animate-spin block" />
+                  ) : (
+                    <Icon name="image" size={22} color="white" />
+                  )}
                 </div>
+              </button>
+
+              <div className="flex justify-center -mt-9">
+                <button
+                  type="button"
+                  onClick={() => avatarFileRef.current?.click()}
+                  className="relative"
+                  style={{ boxShadow: "0 0 0 4px var(--bg)", borderRadius: "var(--r-avatar)" }}
+                >
+                  <Avatar
+                    displayName={editName || profile.displayName}
+                    src={editAvatar.trim() || null}
+                    size={84}
+                  />
+                  <div
+                    className="absolute inset-0 flex items-center justify-center"
+                    style={{ background: "rgba(0,0,0,0.32)", borderRadius: "var(--r-avatar)" }}
+                  >
+                    {avatarUploading ? (
+                      <span className="w-5 h-5 rounded-full border-[3px] border-white border-t-transparent animate-spin block" />
+                    ) : (
+                      <Icon name="image" size={18} color="white" />
+                    )}
+                  </div>
+                </button>
               </div>
             </div>
+
+            <input
+              ref={avatarFileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarFile}
+            />
+            <input
+              ref={bannerFileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleBannerFile}
+            />
             <div className="flex flex-col gap-4 px-5 pb-10">
               <div>
                 <label className="block text-[13.5px] font-bold mb-1.5 ml-1" style={{ color: "var(--text-muted)" }}>
@@ -493,22 +594,6 @@ export function ProfileView() {
                   onChange={(e) => setEditBio(e.target.value)}
                   rows={3}
                   className="w-full px-4 py-3 rounded-[16px] border-none outline-none resize-none text-[15px] leading-snug font-sans"
-                  style={{
-                    background: "var(--surface)",
-                    boxShadow: "inset 0 0 0 1.5px var(--border)",
-                    color: "var(--text)",
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-[13.5px] font-bold mb-1.5 ml-1" style={{ color: "var(--text-muted)" }}>
-                  Photo de profil (URL, optionnel)
-                </label>
-                <input
-                  value={editAvatar}
-                  onChange={(e) => setEditAvatar(e.target.value)}
-                  placeholder="https://… (laisser vide = initiale)"
-                  className="w-full h-[52px] px-4 rounded-[16px] border-none outline-none text-[15.5px]"
                   style={{
                     background: "var(--surface)",
                     boxShadow: "inset 0 0 0 1.5px var(--border)",
