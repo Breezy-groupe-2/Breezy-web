@@ -10,6 +10,7 @@ export async function updateProfile(payload: {
   displayName?: string;
   bio?: string;
   avatarUrl?: string;
+  bannerUrl?: string;
 }): Promise<User> {
   const { data } = await apiClient.put<User>("/api/v1/users/me", payload);
   return data;

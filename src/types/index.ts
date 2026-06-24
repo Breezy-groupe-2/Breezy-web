@@ -7,6 +7,7 @@ export interface User {
   email: string;
   bio?: string;
   avatarUrl?: string;
+  bannerUrl?: string;
   followersCount: number;
   followingCount: number;
   createdAt: string;
