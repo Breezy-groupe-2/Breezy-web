@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Avatar, Icon } from "@/components/ui";
 import { PostCard } from "@/features/posts/PostCard";
@@ -13,7 +14,10 @@ import {
   unlikePost,
   deletePost,
   updatePost,
+  repostPost,
+  unrepostPost,
 } from "@/features/posts/posts.api";
+import { applyRepostToggle, findPostInTree } from "@/features/posts/post-mutations";
 import { uploadMedia } from "@/features/media/media.api";
 import { useAuth } from "@/hooks/use-auth";
 import { useFollow } from "@/store/follow-context";
@@ -198,6 +202,19 @@ export function ProfileView() {
         setLikedState(id, false);
       });
     }
+  }
+
+  function handleRepost(id: string) {
+    const target = findPostInTree(posts, id);
+    const wasReposted = target?.isReposted ?? false;
+    setPosts((prev) => applyRepostToggle(prev, id, !wasReposted));
+    (wasReposted ? unrepostPost : repostPost)(id).catch(() =>
+      setPosts((prev) => applyRepostToggle(prev, id, wasReposted))
+    );
+  }
+
+  function handleQuoted(created: Post) {
+    if (isMe) setPosts((prev) => [created, ...prev]);
   }
 
   useEffect(() => {
@@ -461,24 +478,26 @@ export function ProfileView() {
             </p>
           )}
           <div className="flex gap-5 mt-3">
-            <span className="text-[14px]" style={{ color: "var(--text-muted)" }}>
-              <b
-                className="font-display font-bold"
-                style={{ color: "var(--text)" }}
-              >
+            <Link
+              href={`/profile/${profile.username}/following`}
+              className="text-[14px] hover:underline"
+              style={{ color: "var(--text-muted)" }}
+            >
+              <b className="font-display font-bold" style={{ color: "var(--text)" }}>
                 {profile.followingCount.toLocaleString("fr")}
               </b>{" "}
               abonnements
-            </span>
-            <span className="text-[14px]" style={{ color: "var(--text-muted)" }}>
-              <b
-                className="font-display font-bold"
-                style={{ color: "var(--text)" }}
-              >
+            </Link>
+            <Link
+              href={`/profile/${profile.username}/followers`}
+              className="text-[14px] hover:underline"
+              style={{ color: "var(--text-muted)" }}
+            >
+              <b className="font-display font-bold" style={{ color: "var(--text)" }}>
                 {profile.followersCount.toLocaleString("fr")}
               </b>{" "}
               abonnés
-            </span>
+            </Link>
           </div>
         </div>
 
@@ -516,6 +535,8 @@ export function ProfileView() {
                 post={post}
                 isOwn={post.author.username === me?.username}
                 onLike={handleLike}
+                onRepost={handleRepost}
+                onQuoted={handleQuoted}
                 onDelete={handleDelete}
                 onUpdate={handleUpdate}
               />
@@ -534,6 +555,8 @@ export function ProfileView() {
                   post={post}
                   isOwn={post.author.username === me?.username}
                   onLike={handleLike}
+                  onRepost={handleRepost}
+                  onQuoted={handleQuoted}
                   onDelete={handleDelete}
                   onUpdate={handleUpdate}
                 />

@@ -25,6 +25,10 @@ export interface Post {
   likeCount: number;
   commentsCount: number;
   isLiked: boolean;
+  repostCount: number;
+  isReposted: boolean;
+  /** The original post when this is a repost (plain or quote); null otherwise. */
+  repostOf?: Post | null;
   parentId?: string;
   createdAt: string;
 }
