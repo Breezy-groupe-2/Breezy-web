@@ -92,6 +92,11 @@ export interface ModAccount {
   status: UserStatus;
 }
 
+export interface Trend {
+  tag: string;
+  count: number;
+}
+
 export interface AuthResponse {
   token: string;
   user: User;

@@ -28,3 +28,25 @@ export async function getReplies(commentId: string): Promise<Reply[]> {
   const { data } = await apiClient.get<Reply[]>(`/api/v1/comments/${commentId}/replies`);
   return data;
 }
+
+export async function likeComment(id: string): Promise<{ id: string; likeCount: number }> {
+  const { data } = await apiClient.post<{ id: string; likeCount: number }>(
+    `/api/v1/comments/${id}/like`
+  );
+  return data;
+}
+
+export async function unlikeComment(id: string): Promise<{ id: string; likeCount: number }> {
+  const { data } = await apiClient.delete<{ id: string; likeCount: number }>(
+    `/api/v1/comments/${id}/like`
+  );
+  return data;
+}
+
+export async function deleteComment(postId: string, commentId: string): Promise<void> {
+  await apiClient.delete(`/api/v1/posts/${postId}/comments/${commentId}`);
+}
+
+export async function deleteReply(commentId: string, replyId: string): Promise<void> {
+  await apiClient.delete(`/api/v1/comments/${commentId}/replies/${replyId}`);
+}
