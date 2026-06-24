@@ -120,10 +120,11 @@ export const handlers = [
 
   http.post(`${BASE}/api/v1/posts`, async ({ request }) => {
     await delay(350);
-    const body = (await request.json()) as { content: string };
+    const body = (await request.json()) as { content: string; mediaUrl?: string };
     const newPost: Post = {
       id: String(Date.now()),
       content: body.content,
+      mediaUrl: body.mediaUrl,
       author: MOCK_ME,
       likeCount: 0,
       commentsCount: 0,
@@ -132,6 +133,12 @@ export const handlers = [
     };
     posts = [newPost, ...posts];
     return HttpResponse.json(newPost, { status: 201 });
+  }),
+
+  http.post(`${BASE}/api/v1/media/upload`, async () => {
+    await delay(600);
+    const seed = Math.floor(Math.random() * 200) + 1;
+    return HttpResponse.json({ url: `https://picsum.photos/seed/${seed}/800/600` });
   }),
 
   http.get(`${BASE}/api/v1/posts/:id`, async ({ params }) => {

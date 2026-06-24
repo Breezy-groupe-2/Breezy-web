@@ -19,6 +19,7 @@ export interface User {
 export interface Post {
   id: string;
   content: string;
+  mediaUrl?: string;
   author: User;
   likeCount: number;
   commentsCount: number;

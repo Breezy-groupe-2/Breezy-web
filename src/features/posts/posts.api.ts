@@ -11,8 +11,8 @@ export async function getTrends(): Promise<Trend[]> {
   return data;
 }
 
-export async function createPost(content: string): Promise<Post> {
-  const { data } = await apiClient.post<Post>("/api/v1/posts", { content });
+export async function createPost(content: string, mediaUrl?: string): Promise<Post> {
+  const { data } = await apiClient.post<Post>("/api/v1/posts", { content, mediaUrl });
   return data;
 }
 
