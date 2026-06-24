@@ -17,7 +17,7 @@ import {
   repostPost,
   unrepostPost,
 } from "@/features/posts/posts.api";
-import { applyRepostToggle, findPostInTree } from "@/features/posts/post-mutations";
+import { applyLikeToggle, applyRepostToggle, findPostInTree } from "@/features/posts/post-mutations";
 import { uploadMedia } from "@/features/media/media.api";
 import { useAuth } from "@/hooks/use-auth";
 import { useFollow } from "@/store/follow-context";
@@ -103,22 +103,10 @@ export function ProfileView() {
     const target = posts.find((p) => p.id === id);
     if (!target) return;
     const wasLiked = target.isLiked;
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id === id
-          ? { ...p, isLiked: !wasLiked, likeCount: wasLiked ? p.likeCount - 1 : p.likeCount + 1 }
-          : p
-      )
+    setPosts((prev) => applyLikeToggle(prev, id, !wasLiked));
+    (wasLiked ? unlikePost : likePost)(id).catch(() =>
+      setPosts((prev) => applyLikeToggle(prev, id, wasLiked))
     );
-    const rollback = () =>
-      setPosts((prev) =>
-        prev.map((p) =>
-          p.id === id
-            ? { ...p, isLiked: wasLiked, likeCount: wasLiked ? p.likeCount + 1 : p.likeCount - 1 }
-            : p
-        )
-      );
-    (wasLiked ? unlikePost : likePost)(id).catch(rollback);
     // The set of liked posts changed: refetch the Likes tab next time it opens.
     setLikedLoaded(false);
   }
@@ -170,11 +158,7 @@ export function ProfileView() {
   // Reflect a like-state change on a post wherever it appears on this page
   // (the Posts/Media tab shares the `posts` list with what's shown in Likes).
   function setLikedState(id: string, liked: boolean) {
-    const apply = (p: Post): Post =>
-      p.id === id
-        ? { ...p, isLiked: liked, likeCount: Math.max(0, p.likeCount + (liked ? 1 : -1)) }
-        : p;
-    setPosts((prev) => prev.map(apply));
+    setPosts((prev) => applyLikeToggle(prev, id, liked));
   }
 
   function handleLikeLiked(id: string) {
@@ -191,14 +175,10 @@ export function ProfileView() {
       });
     } else {
       // Re-liking a card still on screen: restore its liked state.
-      setLikedPosts((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, isLiked: true, likeCount: p.likeCount + 1 } : p))
-      );
+      setLikedPosts((prev) => applyLikeToggle(prev, id, true));
       setLikedState(id, true);
       likePost(id).catch(() => {
-        setLikedPosts((prev) =>
-          prev.map((p) => (p.id === id ? { ...p, isLiked: false, likeCount: p.likeCount - 1 } : p))
-        );
+        setLikedPosts((prev) => applyLikeToggle(prev, id, false));
         setLikedState(id, false);
       });
     }

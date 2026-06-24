@@ -14,7 +14,7 @@ import {
   repostPost,
   unrepostPost,
 } from '@/features/posts/posts.api';
-import { applyRepostToggle, findPostInTree } from '@/features/posts/post-mutations';
+import { applyLikeToggle, applyRepostToggle, findPostInTree } from '@/features/posts/post-mutations';
 import { uploadMedia } from '@/features/media/media.api';
 import { useCompose } from '@/store/compose-context';
 import { useTheme } from '@/store/theme-context';
@@ -87,33 +87,13 @@ export function HomeView() {
   }, [registerHandler, handlePost]);
 
   function handleLike(id: string) {
-    const target = posts.find((p) => p.id === id);
+    const target = findPostInTree(posts, id);
     if (!target) return;
     const wasLiked = target.isLiked;
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id === id
-          ? {
-              ...p,
-              isLiked: !wasLiked,
-              likeCount: wasLiked ? p.likeCount - 1 : p.likeCount + 1,
-            }
-          : p
-      )
+    setPosts((prev) => applyLikeToggle(prev, id, !wasLiked));
+    (wasLiked ? unlikePost : likePost)(id).catch(() =>
+      setPosts((prev) => applyLikeToggle(prev, id, wasLiked))
     );
-    const rollback = () =>
-      setPosts((prev) =>
-        prev.map((p) =>
-          p.id === id
-            ? {
-                ...p,
-                isLiked: wasLiked,
-                likeCount: wasLiked ? p.likeCount + 1 : p.likeCount - 1,
-              }
-            : p
-        )
-      );
-    (wasLiked ? unlikePost : likePost)(id).catch(rollback);
   }
 
   function handleRepost(id: string) {
