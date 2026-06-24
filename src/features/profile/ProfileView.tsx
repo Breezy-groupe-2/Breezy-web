@@ -115,6 +115,8 @@ export function ProfileView() {
         )
       );
     (wasLiked ? unlikePost : likePost)(id).catch(rollback);
+    // The set of liked posts changed: refetch the Likes tab next time it opens.
+    setLikedLoaded(false);
   }
 
   // New posts created from the global composer should appear instantly when the
@@ -164,23 +166,22 @@ export function ProfileView() {
   function handleLikeLiked(id: string) {
     const target = likedPosts.find((p) => p.id === id);
     if (!target) return;
-    const wasLiked = target.isLiked;
-    setLikedPosts((prev) =>
-      prev.map((p) =>
-        p.id === id
-          ? { ...p, isLiked: !wasLiked, likeCount: wasLiked ? p.likeCount - 1 : p.likeCount + 1 }
-          : p
-      )
-    );
-    const rollback = () =>
+    if (target.isLiked) {
+      // Unliking from the Likes tab: drop the card right away.
+      const snapshot = likedPosts;
+      setLikedPosts((prev) => prev.filter((p) => p.id !== id));
+      unlikePost(id).catch(() => setLikedPosts(snapshot));
+    } else {
+      // Re-liking a card still on screen: restore its liked state.
       setLikedPosts((prev) =>
-        prev.map((p) =>
-          p.id === id
-            ? { ...p, isLiked: wasLiked, likeCount: wasLiked ? p.likeCount + 1 : p.likeCount - 1 }
-            : p
+        prev.map((p) => (p.id === id ? { ...p, isLiked: true, likeCount: p.likeCount + 1 } : p))
+      );
+      likePost(id).catch(() =>
+        setLikedPosts((prev) =>
+          prev.map((p) => (p.id === id ? { ...p, isLiked: false, likeCount: p.likeCount - 1 } : p))
         )
       );
-    (wasLiked ? unlikePost : likePost)(id).catch(rollback);
+    }
   }
 
   useEffect(() => {
