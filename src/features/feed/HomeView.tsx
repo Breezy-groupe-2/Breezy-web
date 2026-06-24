@@ -11,7 +11,10 @@ import {
   unlikePost,
   deletePost,
   updatePost,
+  repostPost,
+  unrepostPost,
 } from '@/features/posts/posts.api';
+import { applyRepostToggle, findPostInTree } from '@/features/posts/post-mutations';
 import { uploadMedia } from '@/features/media/media.api';
 import { useCompose } from '@/store/compose-context';
 import { useTheme } from '@/store/theme-context';
@@ -63,6 +66,8 @@ export function HomeView() {
         likeCount: 0,
         commentsCount: 0,
         isLiked: false,
+        repostCount: 0,
+        isReposted: false,
         createdAt: new Date().toISOString(),
       };
       setPosts((prev) => [optimistic, ...prev]);
@@ -111,6 +116,19 @@ export function HomeView() {
     (wasLiked ? unlikePost : likePost)(id).catch(rollback);
   }
 
+  function handleRepost(id: string) {
+    const target = findPostInTree(posts, id);
+    const wasReposted = target?.isReposted ?? false;
+    setPosts((prev) => applyRepostToggle(prev, id, !wasReposted));
+    (wasReposted ? unrepostPost : repostPost)(id).catch(() =>
+      setPosts((prev) => applyRepostToggle(prev, id, wasReposted))
+    );
+  }
+
+  function handleQuoted(created: Post) {
+    setPosts((prev) => [created, ...prev]);
+  }
+
   function handleDelete(id: string) {
     setPosts((prev) => prev.filter((p) => p.id !== id));
     deletePost(id).catch(() => {
@@ -120,8 +138,8 @@ export function HomeView() {
     });
   }
 
-  async function handleUpdate(id: string, newContent: string) {
-    const updated = await updatePost(id, newContent);
+  async function handleUpdate(id: string, newContent: string, mediaUrl?: string | null) {
+    const updated = await updatePost(id, newContent, mediaUrl);
     setPosts((prev) => prev.map((p) => (p.id === id ? updated : p)));
   }
 
@@ -301,6 +319,8 @@ export function HomeView() {
               post={post}
               isOwn={post.author.username === user?.username}
               onLike={handleLike}
+              onRepost={handleRepost}
+              onQuoted={handleQuoted}
               onDelete={handleDelete}
               onUpdate={handleUpdate}
             />

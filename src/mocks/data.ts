@@ -194,6 +194,8 @@ export const MOCK_POSTS: Post[] = [
     likeCount: 63,
     commentsCount: 9,
     isLiked: false,
+    repostCount: 0,
+    isReposted: false,
     createdAt: new Date(Date.now() - 9 * 60 * 1000).toISOString(),
   },
   {
@@ -203,6 +205,8 @@ export const MOCK_POSTS: Post[] = [
     likeCount: 512,
     commentsCount: 24,
     isLiked: true,
+    repostCount: 0,
+    isReposted: false,
     createdAt: new Date(Date.now() - 32 * 60 * 1000).toISOString(),
   },
   {
@@ -212,6 +216,8 @@ export const MOCK_POSTS: Post[] = [
     likeCount: 88,
     commentsCount: 6,
     isLiked: false,
+    repostCount: 0,
+    isReposted: false,
     createdAt: new Date(Date.now() - 55 * 60 * 1000).toISOString(),
   },
   {
@@ -221,6 +227,8 @@ export const MOCK_POSTS: Post[] = [
     likeCount: 214,
     commentsCount: 17,
     isLiked: false,
+    repostCount: 0,
+    isReposted: false,
     createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
   },
   {
@@ -230,6 +238,8 @@ export const MOCK_POSTS: Post[] = [
     likeCount: 341,
     commentsCount: 31,
     isLiked: false,
+    repostCount: 0,
+    isReposted: false,
     createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
   },
   {
@@ -239,6 +249,8 @@ export const MOCK_POSTS: Post[] = [
     likeCount: 97,
     commentsCount: 12,
     isLiked: false,
+    repostCount: 0,
+    isReposted: false,
     createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
   },
 ];

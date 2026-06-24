@@ -129,6 +129,8 @@ export const handlers = [
       likeCount: 0,
       commentsCount: 0,
       isLiked: false,
+      repostCount: 0,
+      isReposted: false,
       createdAt: new Date().toISOString(),
     };
     posts = [newPost, ...posts];

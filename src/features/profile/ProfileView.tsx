@@ -1,18 +1,23 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Avatar, Icon } from "@/components/ui";
 import { PostCard } from "@/features/posts/PostCard";
 import { getProfile, updateProfile } from "@/features/profile/profile.api";
 import {
   getUserPosts,
+  getLikedPosts,
   createPost,
   likePost,
   unlikePost,
   deletePost,
   updatePost,
+  repostPost,
+  unrepostPost,
 } from "@/features/posts/posts.api";
+import { applyRepostToggle, findPostInTree } from "@/features/posts/post-mutations";
 import { uploadMedia } from "@/features/media/media.api";
 import { useAuth } from "@/hooks/use-auth";
 import { useFollow } from "@/store/follow-context";
@@ -34,6 +39,8 @@ export function ProfileView() {
 
   const [profile, setProfile] = useState<User | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [likedPosts, setLikedPosts] = useState<Post[]>([]);
+  const [likedLoaded, setLikedLoaded] = useState(false);
   const [tab, setTab] = useState<Tab>("posts");
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
@@ -62,6 +69,9 @@ export function ProfileView() {
         setEditBio(prof.bio ?? "");
         setEditAvatar(prof.avatarUrl ?? "");
         setEditBanner(prof.bannerUrl ?? "");
+        // Reset the Likes tab so it reloads for the newly opened profile.
+        setLikedPosts([]);
+        setLikedLoaded(false);
       })
       .finally(() => setLoading(false));
   }, [resolvedUsername]);
@@ -109,6 +119,8 @@ export function ProfileView() {
         )
       );
     (wasLiked ? unlikePost : likePost)(id).catch(rollback);
+    // The set of liked posts changed: refetch the Likes tab next time it opens.
+    setLikedLoaded(false);
   }
 
   // New posts created from the global composer should appear instantly when the
@@ -132,9 +144,77 @@ export function ProfileView() {
     deletePost(id).catch(() => setPosts(snapshot));
   }
 
-  async function handleUpdate(id: string, newContent: string) {
-    const updated = await updatePost(id, newContent);
+  async function handleUpdate(id: string, newContent: string, mediaUrl?: string | null) {
+    const updated = await updatePost(id, newContent, mediaUrl);
     setPosts((prev) => prev.map((p) => (p.id === id ? updated : p)));
+  }
+
+  // Lazy-load the Likes tab the first time it is opened for this profile.
+  useEffect(() => {
+    if (tab !== "likes" || likedLoaded || !resolvedUsername) return;
+    let cancelled = false;
+    getLikedPosts(resolvedUsername)
+      .then((p) => {
+        if (cancelled) return;
+        setLikedPosts(p);
+        setLikedLoaded(true);
+      })
+      .catch(() => {
+        if (!cancelled) setLikedLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, likedLoaded, resolvedUsername]);
+
+  // Reflect a like-state change on a post wherever it appears on this page
+  // (the Posts/Media tab shares the `posts` list with what's shown in Likes).
+  function setLikedState(id: string, liked: boolean) {
+    const apply = (p: Post): Post =>
+      p.id === id
+        ? { ...p, isLiked: liked, likeCount: Math.max(0, p.likeCount + (liked ? 1 : -1)) }
+        : p;
+    setPosts((prev) => prev.map(apply));
+  }
+
+  function handleLikeLiked(id: string) {
+    const target = likedPosts.find((p) => p.id === id);
+    if (!target) return;
+    if (target.isLiked) {
+      // Unliking from the Likes tab: drop the card and unlike everywhere.
+      const snapshot = likedPosts;
+      setLikedPosts((prev) => prev.filter((p) => p.id !== id));
+      setLikedState(id, false);
+      unlikePost(id).catch(() => {
+        setLikedPosts(snapshot);
+        setLikedState(id, true);
+      });
+    } else {
+      // Re-liking a card still on screen: restore its liked state.
+      setLikedPosts((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, isLiked: true, likeCount: p.likeCount + 1 } : p))
+      );
+      setLikedState(id, true);
+      likePost(id).catch(() => {
+        setLikedPosts((prev) =>
+          prev.map((p) => (p.id === id ? { ...p, isLiked: false, likeCount: p.likeCount - 1 } : p))
+        );
+        setLikedState(id, false);
+      });
+    }
+  }
+
+  function handleRepost(id: string) {
+    const target = findPostInTree(posts, id);
+    const wasReposted = target?.isReposted ?? false;
+    setPosts((prev) => applyRepostToggle(prev, id, !wasReposted));
+    (wasReposted ? unrepostPost : repostPost)(id).catch(() =>
+      setPosts((prev) => applyRepostToggle(prev, id, wasReposted))
+    );
+  }
+
+  function handleQuoted(created: Post) {
+    if (isMe) setPosts((prev) => [created, ...prev]);
   }
 
   useEffect(() => {
@@ -398,24 +478,26 @@ export function ProfileView() {
             </p>
           )}
           <div className="flex gap-5 mt-3">
-            <span className="text-[14px]" style={{ color: "var(--text-muted)" }}>
-              <b
-                className="font-display font-bold"
-                style={{ color: "var(--text)" }}
-              >
+            <Link
+              href={`/profile/${profile.username}/following`}
+              className="text-[14px] hover:underline"
+              style={{ color: "var(--text-muted)" }}
+            >
+              <b className="font-display font-bold" style={{ color: "var(--text)" }}>
                 {profile.followingCount.toLocaleString("fr")}
               </b>{" "}
               abonnements
-            </span>
-            <span className="text-[14px]" style={{ color: "var(--text-muted)" }}>
-              <b
-                className="font-display font-bold"
-                style={{ color: "var(--text)" }}
-              >
+            </Link>
+            <Link
+              href={`/profile/${profile.username}/followers`}
+              className="text-[14px] hover:underline"
+              style={{ color: "var(--text-muted)" }}
+            >
+              <b className="font-display font-bold" style={{ color: "var(--text)" }}>
                 {profile.followersCount.toLocaleString("fr")}
               </b>{" "}
               abonnés
-            </span>
+            </Link>
           </div>
         </div>
 
@@ -444,24 +526,56 @@ export function ProfileView() {
       {/* Posts */}
       <div className="flex flex-col gap-3 p-3.5 mt-3 pb-[120px] md:pb-8">
         {tab === "posts" &&
-          posts.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              isOwn={post.author.username === me?.username}
-              onLike={handleLike}
-              onDelete={handleDelete}
-              onUpdate={handleUpdate}
-            />
+          (posts.length === 0 ? (
+            <EmptyTab text="Aucun post pour l’instant." />
+          ) : (
+            posts.map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                isOwn={post.author.username === me?.username}
+                onLike={handleLike}
+                onRepost={handleRepost}
+                onQuoted={handleQuoted}
+                onDelete={handleDelete}
+                onUpdate={handleUpdate}
+              />
+            ))
           ))}
-        {tab !== "posts" && (
-          <p
-            className="text-center text-[14px] py-14"
-            style={{ color: "var(--text-faint)" }}
-          >
-            Rien à montrer ici pour l&apos;instant.
-          </p>
-        )}
+
+        {tab === "media" &&
+          (() => {
+            const media = posts.filter((p) => p.mediaUrl);
+            return media.length === 0 ? (
+              <EmptyTab text="Aucun média pour l’instant." />
+            ) : (
+              media.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  isOwn={post.author.username === me?.username}
+                  onLike={handleLike}
+                  onRepost={handleRepost}
+                  onQuoted={handleQuoted}
+                  onDelete={handleDelete}
+                  onUpdate={handleUpdate}
+                />
+              ))
+            );
+          })()}
+
+        {tab === "likes" &&
+          (!likedLoaded ? (
+            <div className="flex justify-center py-12">
+              <span className="w-7 h-7 rounded-full border-[3px] border-primary border-t-transparent animate-spin block" />
+            </div>
+          ) : likedPosts.length === 0 ? (
+            <EmptyTab text="Aucun post liké pour l’instant." />
+          ) : (
+            likedPosts.map((post) => (
+              <PostCard key={post.id} post={post} onLike={handleLikeLiked} />
+            ))
+          ))}
       </div>
 
       {/* Edit profile sheet */}
@@ -606,5 +720,13 @@ export function ProfileView() {
         </div>
       )}
     </div>
+  );
+}
+
+function EmptyTab({ text }: { text: string }) {
+  return (
+    <p className="text-center text-[14px] py-14" style={{ color: "var(--text-faint)" }}>
+      {text}
+    </p>
   );
 }
