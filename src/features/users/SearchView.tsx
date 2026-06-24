@@ -1,0 +1,194 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { Avatar } from "@/components/ui";
+import { searchUsers } from "@/features/users/users.api";
+import { useFollow } from "@/store/follow-context";
+import { useAuth } from "@/hooks/use-auth";
+import type { User } from "@/types";
+
+export function SearchView() {
+  const { user: me } = useAuth();
+  const { isFollowing, toggle } = useFollow();
+
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<User[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
+
+  // Immediate UI reaction (spinner / reset) lives in the change handler so the
+  // effect below stays free of synchronous setState.
+  function updateQuery(value: string) {
+    setQuery(value);
+    if (value.trim()) {
+      setLoading(true);
+    } else {
+      setResults([]);
+      setSearched(false);
+      setLoading(false);
+    }
+  }
+
+  // Debounce the query so the API is hit only once the user pauses typing.
+  useEffect(() => {
+    const term = query.trim();
+    if (!term) return;
+    let cancelled = false;
+    const id = setTimeout(() => {
+      searchUsers(term)
+        .then((users) => {
+          if (cancelled) return;
+          setResults(users);
+          setSearched(true);
+        })
+        .catch(() => {
+          if (!cancelled) setResults([]);
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
+  }, [query]);
+
+  return (
+    <div className="flex flex-col min-h-svh scrollbar-hide overflow-y-auto">
+      {/* Sticky search bar */}
+      <div
+        className="sticky top-0 z-30 pt-[54px] md:pt-3 px-4 pb-3"
+        style={{
+          background: "color-mix(in oklch, var(--bg) 82%, transparent)",
+          backdropFilter: "blur(14px)",
+          WebkitBackdropFilter: "blur(14px)",
+        }}
+      >
+        <div
+          className="flex items-center gap-2.5 h-11 px-4 rounded-full"
+          style={{ background: "var(--surface-2)" }}
+        >
+          <svg
+            width="19"
+            height="19"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="var(--text-faint)"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            autoFocus
+            value={query}
+            onChange={(e) => updateQuery(e.target.value)}
+            placeholder="Rechercher un profil"
+            className="flex-1 bg-transparent border-none outline-none text-[15.5px]"
+            style={{ color: "var(--text)" }}
+          />
+          {query && (
+            <button onClick={() => updateQuery("")} className="shrink-0" aria-label="Effacer">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="var(--text-faint)"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Results */}
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <span className="w-7 h-7 rounded-full border-[3px] border-primary border-t-transparent animate-spin block" />
+        </div>
+      ) : !query.trim() ? (
+        <EmptyState title="Découvrir" text="Cherche un pseudo ou un nom pour trouver des profils." />
+      ) : searched && results.length === 0 ? (
+        <EmptyState title="Aucun résultat" text={`Personne ne correspond à « ${query.trim()} ».`} />
+      ) : (
+        <div className="flex flex-col py-1 pb-[120px] md:pb-8">
+          {results.map((u) => {
+            const isMe = u.username === me?.username;
+            const isFollowed = isFollowing(u.username);
+            return (
+              <div key={u.username} className="flex items-center gap-3 px-5 py-2.5">
+                <Link href={`/profile/${u.username}`}>
+                  <Avatar displayName={u.displayName} src={u.avatarUrl} size={44} />
+                </Link>
+                <Link href={`/profile/${u.username}`} className="flex-1 min-w-0">
+                  <p className="text-[15px] font-bold truncate" style={{ color: "var(--text)" }}>
+                    {u.displayName}
+                  </p>
+                  <p className="text-[13.5px] truncate" style={{ color: "var(--text-faint)" }}>
+                    @{u.username}
+                  </p>
+                </Link>
+                {!isMe && (
+                  <button
+                    onClick={() => toggle(u.username)}
+                    className="h-8 px-4 rounded-full text-[13px] font-bold transition-colors shrink-0"
+                    style={
+                      isFollowed
+                        ? { background: "var(--surface-2)", color: "var(--text-muted)" }
+                        : { background: "var(--primary-soft)", color: "var(--primary)" }
+                    }
+                  >
+                    {isFollowed ? "Suivi" : "Suivre"}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EmptyState({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 gap-3 px-5">
+      <div
+        className="w-14 h-14 flex items-center justify-center rounded-[18px] mb-1"
+        style={{ background: "var(--primary-soft)" }}
+      >
+        <svg
+          width="28"
+          height="28"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="var(--primary)"
+          strokeWidth="1.9"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+      </div>
+      <h1
+        className="font-display font-extrabold text-[22px] tracking-tight"
+        style={{ color: "var(--text)" }}
+      >
+        {title}
+      </h1>
+      <p className="text-[15px] text-center max-w-[280px]" style={{ color: "var(--text-muted)" }}>
+        {text}
+      </p>
+    </div>
+  );
+}
