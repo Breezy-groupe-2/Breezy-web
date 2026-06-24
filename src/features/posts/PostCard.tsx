@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { Avatar, Icon, LikeButton } from '@/components/ui';
+import { CommentComposerModal } from '@/features/comments/CommentComposerModal';
 import type { Post } from '@/types';
 import { formatRelative } from '@/lib/time';
 
@@ -28,6 +29,8 @@ export function PostCard({
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(post.content);
   const [saving, setSaving] = useState(false);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [commentBump, setCommentBump] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -221,16 +224,19 @@ export function PostCard({
           {/* Actions */}
           {!editing && (
             <div className="flex justify-between mt-3 pr-1 max-w-[320px]">
-              <Link href={`/post/${post.id}`}>
-                <button
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex items-center gap-1.5 px-0.5 py-1 rounded-full text-[13.5px] font-semibold"
-                  style={{ color: 'var(--text-faint)' }}
-                >
-                  <Icon name="comment" size={20} stroke={1.9} />
-                  {post.commentsCount}
-                </button>
-              </Link>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setComposerOpen(true);
+                }}
+                className="flex items-center gap-1.5 px-0.5 py-1 rounded-full text-[13.5px] font-semibold transition-colors hover:text-[var(--primary)]"
+                style={{ color: 'var(--text-faint)' }}
+                aria-label="Commenter"
+              >
+                <Icon name="comment" size={20} stroke={1.9} />
+                {post.commentsCount + commentBump}
+              </button>
               <button
                 onClick={(e) => e.stopPropagation()}
                 className="flex items-center gap-1.5 px-0.5 py-1 rounded-full text-[13.5px] font-semibold"
@@ -254,6 +260,14 @@ export function PostCard({
           )}
         </div>
       </div>
+
+      {composerOpen && (
+        <CommentComposerModal
+          post={post}
+          onClose={() => setComposerOpen(false)}
+          onSubmitted={() => setCommentBump((b) => b + 1)}
+        />
+      )}
     </article>
   );
 }
