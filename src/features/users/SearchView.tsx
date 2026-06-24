@@ -3,10 +3,12 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/ui";
+import { PostCard } from "@/features/posts/PostCard";
 import { searchUsers } from "@/features/users/users.api";
+import { getTrends, searchPosts, likePost, unlikePost } from "@/features/posts/posts.api";
 import { useFollow } from "@/store/follow-context";
 import { useAuth } from "@/hooks/use-auth";
-import type { User } from "@/types";
+import type { User, Post, Trend } from "@/types";
 
 export function SearchView() {
   const { user: me } = useAuth();
@@ -14,8 +16,24 @@ export function SearchView() {
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<User[]>([]);
+  const [postResults, setPostResults] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [trends, setTrends] = useState<Trend[]>([]);
+
+  // A "#hashtag" query searches posts; anything else searches profiles.
+  const isHashtag = query.trim().startsWith("#");
+
+  // Load trends once for the default "Discover" view (shown when not searching).
+  useEffect(() => {
+    let cancelled = false;
+    getTrends()
+      .then((t) => !cancelled && setTrends(t))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Immediate UI reaction (spinner / reset) lives in the change handler so the
   // effect below stays free of synchronous setState.
@@ -25,6 +43,7 @@ export function SearchView() {
       setLoading(true);
     } else {
       setResults([]);
+      setPostResults([]);
       setSearched(false);
       setLoading(false);
     }
@@ -34,16 +53,27 @@ export function SearchView() {
   useEffect(() => {
     const term = query.trim();
     if (!term) return;
+    const tag = term.startsWith("#");
     let cancelled = false;
     const id = setTimeout(() => {
-      searchUsers(term)
-        .then((users) => {
+      const run = tag ? searchPosts(term) : searchUsers(term);
+      run
+        .then((data) => {
           if (cancelled) return;
-          setResults(users);
+          if (tag) {
+            setPostResults(data as Post[]);
+            setResults([]);
+          } else {
+            setResults(data as User[]);
+            setPostResults([]);
+          }
           setSearched(true);
         })
         .catch(() => {
-          if (!cancelled) setResults([]);
+          if (!cancelled) {
+            setResults([]);
+            setPostResults([]);
+          }
         })
         .finally(() => {
           if (!cancelled) setLoading(false);
@@ -54,6 +84,22 @@ export function SearchView() {
       clearTimeout(id);
     };
   }, [query]);
+
+  function handleLikePost(id: string) {
+    const target = postResults.find((p) => p.id === id);
+    if (!target) return;
+    const wasLiked = target.isLiked;
+    const patch = (liked: boolean) =>
+      setPostResults((prev) =>
+        prev.map((p) =>
+          p.id === id
+            ? { ...p, isLiked: liked, likeCount: Math.max(0, p.likeCount + (liked ? 1 : -1)) }
+            : p
+        )
+      );
+    patch(!wasLiked);
+    (wasLiked ? unlikePost : likePost)(id).catch(() => patch(wasLiked));
+  }
 
   return (
     <div className="flex flex-col min-h-svh scrollbar-hide overflow-y-auto">
@@ -87,7 +133,7 @@ export function SearchView() {
             autoFocus
             value={query}
             onChange={(e) => updateQuery(e.target.value)}
-            placeholder="Rechercher un profil"
+            placeholder="Rechercher un profil ou #hashtag"
             className="flex-1 bg-transparent border-none outline-none text-[15.5px]"
             style={{ color: "var(--text)" }}
           />
@@ -116,7 +162,54 @@ export function SearchView() {
           <span className="w-7 h-7 rounded-full border-[3px] border-primary border-t-transparent animate-spin block" />
         </div>
       ) : !query.trim() ? (
-        <EmptyState title="Découvrir" text="Cherche un pseudo ou un nom pour trouver des profils." />
+        trends.length > 0 ? (
+          <div className="flex flex-col pb-[120px] md:pb-8">
+            <h2
+              className="px-5 pt-3 pb-1 font-display font-extrabold text-[20px]"
+              style={{ color: "var(--text)" }}
+            >
+              Tendances
+            </h2>
+            {trends.map(({ tag, count }, i) => (
+              <button
+                key={tag}
+                onClick={() => updateQuery(tag)}
+                className="text-left px-5 py-3 transition-colors hover:bg-[var(--surface-2)]"
+              >
+                <p className="text-[12.5px]" style={{ color: "var(--text-faint)" }}>
+                  {i + 1} · Tendance
+                </p>
+                <p className="text-[15.5px] font-bold mt-0.5" style={{ color: "var(--text)" }}>
+                  {tag}
+                </p>
+                <p className="text-[12.5px] mt-0.5" style={{ color: "var(--text-faint)" }}>
+                  {count} post{count > 1 ? "s" : ""}
+                </p>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            title="Découvrir"
+            text="Cherche un pseudo ou un nom pour trouver des profils."
+          />
+        )
+      ) : isHashtag ? (
+        // Hashtag / keyword search → posts
+        searched && postResults.length === 0 ? (
+          <EmptyState title="Aucun post" text={`Aucun post pour « ${query.trim()} ».`} />
+        ) : (
+          <div className="flex flex-col gap-3 p-3.5 pb-[120px] md:pb-8">
+            {postResults.map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                isOwn={post.author.username === me?.username}
+                onLike={handleLikePost}
+              />
+            ))}
+          </div>
+        )
       ) : searched && results.length === 0 ? (
         <EmptyState title="Aucun résultat" text={`Personne ne correspond à « ${query.trim()} ».`} />
       ) : (
