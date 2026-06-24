@@ -120,8 +120,8 @@ export function HomeView() {
     });
   }
 
-  async function handleUpdate(id: string, newContent: string) {
-    const updated = await updatePost(id, newContent);
+  async function handleUpdate(id: string, newContent: string, mediaUrl?: string | null) {
+    const updated = await updatePost(id, newContent, mediaUrl);
     setPosts((prev) => prev.map((p) => (p.id === id ? updated : p)));
   }
 

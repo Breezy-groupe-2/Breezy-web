@@ -16,8 +16,15 @@ export async function createPost(content: string, mediaUrl?: string): Promise<Po
   return data;
 }
 
-export async function updatePost(id: string, content: string): Promise<Post> {
-  const { data } = await apiClient.put<Post>(`/api/v1/posts/${id}`, { content });
+export async function updatePost(
+  id: string,
+  content: string,
+  mediaUrl?: string | null
+): Promise<Post> {
+  // `mediaUrl` omitted = leave unchanged; null = remove; string = replace.
+  const body: { content: string; mediaUrl?: string | null } = { content };
+  if (mediaUrl !== undefined) body.mediaUrl = mediaUrl;
+  const { data } = await apiClient.put<Post>(`/api/v1/posts/${id}`, body);
   return data;
 }
 
@@ -37,6 +44,11 @@ export async function unlikePost(id: string): Promise<{ id: string; likeCount: n
 
 export async function getUserPosts(username: string): Promise<Post[]> {
   const { data } = await apiClient.get<Post[]>(`/api/v1/posts/user/${username}`);
+  return data;
+}
+
+export async function getLikedPosts(username: string): Promise<Post[]> {
+  const { data } = await apiClient.get<Post[]>(`/api/v1/posts/liked/${username}`);
   return data;
 }
 

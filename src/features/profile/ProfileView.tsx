@@ -7,6 +7,7 @@ import { PostCard } from "@/features/posts/PostCard";
 import { getProfile, updateProfile } from "@/features/profile/profile.api";
 import {
   getUserPosts,
+  getLikedPosts,
   createPost,
   likePost,
   unlikePost,
@@ -34,6 +35,8 @@ export function ProfileView() {
 
   const [profile, setProfile] = useState<User | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [likedPosts, setLikedPosts] = useState<Post[]>([]);
+  const [likedLoaded, setLikedLoaded] = useState(false);
   const [tab, setTab] = useState<Tab>("posts");
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
@@ -62,6 +65,9 @@ export function ProfileView() {
         setEditBio(prof.bio ?? "");
         setEditAvatar(prof.avatarUrl ?? "");
         setEditBanner(prof.bannerUrl ?? "");
+        // Reset the Likes tab so it reloads for the newly opened profile.
+        setLikedPosts([]);
+        setLikedLoaded(false);
       })
       .finally(() => setLoading(false));
   }, [resolvedUsername]);
@@ -132,9 +138,49 @@ export function ProfileView() {
     deletePost(id).catch(() => setPosts(snapshot));
   }
 
-  async function handleUpdate(id: string, newContent: string) {
-    const updated = await updatePost(id, newContent);
+  async function handleUpdate(id: string, newContent: string, mediaUrl?: string | null) {
+    const updated = await updatePost(id, newContent, mediaUrl);
     setPosts((prev) => prev.map((p) => (p.id === id ? updated : p)));
+  }
+
+  // Lazy-load the Likes tab the first time it is opened for this profile.
+  useEffect(() => {
+    if (tab !== "likes" || likedLoaded || !resolvedUsername) return;
+    let cancelled = false;
+    getLikedPosts(resolvedUsername)
+      .then((p) => {
+        if (cancelled) return;
+        setLikedPosts(p);
+        setLikedLoaded(true);
+      })
+      .catch(() => {
+        if (!cancelled) setLikedLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, likedLoaded, resolvedUsername]);
+
+  function handleLikeLiked(id: string) {
+    const target = likedPosts.find((p) => p.id === id);
+    if (!target) return;
+    const wasLiked = target.isLiked;
+    setLikedPosts((prev) =>
+      prev.map((p) =>
+        p.id === id
+          ? { ...p, isLiked: !wasLiked, likeCount: wasLiked ? p.likeCount - 1 : p.likeCount + 1 }
+          : p
+      )
+    );
+    const rollback = () =>
+      setLikedPosts((prev) =>
+        prev.map((p) =>
+          p.id === id
+            ? { ...p, isLiked: wasLiked, likeCount: wasLiked ? p.likeCount + 1 : p.likeCount - 1 }
+            : p
+        )
+      );
+    (wasLiked ? unlikePost : likePost)(id).catch(rollback);
   }
 
   useEffect(() => {
@@ -444,24 +490,52 @@ export function ProfileView() {
       {/* Posts */}
       <div className="flex flex-col gap-3 p-3.5 mt-3 pb-[120px] md:pb-8">
         {tab === "posts" &&
-          posts.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              isOwn={post.author.username === me?.username}
-              onLike={handleLike}
-              onDelete={handleDelete}
-              onUpdate={handleUpdate}
-            />
+          (posts.length === 0 ? (
+            <EmptyTab text="Aucun post pour l’instant." />
+          ) : (
+            posts.map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                isOwn={post.author.username === me?.username}
+                onLike={handleLike}
+                onDelete={handleDelete}
+                onUpdate={handleUpdate}
+              />
+            ))
           ))}
-        {tab !== "posts" && (
-          <p
-            className="text-center text-[14px] py-14"
-            style={{ color: "var(--text-faint)" }}
-          >
-            Rien à montrer ici pour l&apos;instant.
-          </p>
-        )}
+
+        {tab === "media" &&
+          (() => {
+            const media = posts.filter((p) => p.mediaUrl);
+            return media.length === 0 ? (
+              <EmptyTab text="Aucun média pour l’instant." />
+            ) : (
+              media.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  isOwn={post.author.username === me?.username}
+                  onLike={handleLike}
+                  onDelete={handleDelete}
+                  onUpdate={handleUpdate}
+                />
+              ))
+            );
+          })()}
+
+        {tab === "likes" &&
+          (!likedLoaded ? (
+            <div className="flex justify-center py-12">
+              <span className="w-7 h-7 rounded-full border-[3px] border-primary border-t-transparent animate-spin block" />
+            </div>
+          ) : likedPosts.length === 0 ? (
+            <EmptyTab text="Aucun post liké pour l’instant." />
+          ) : (
+            likedPosts.map((post) => (
+              <PostCard key={post.id} post={post} onLike={handleLikeLiked} />
+            ))
+          ))}
       </div>
 
       {/* Edit profile sheet */}
@@ -606,5 +680,13 @@ export function ProfileView() {
         </div>
       )}
     </div>
+  );
+}
+
+function EmptyTab({ text }: { text: string }) {
+  return (
+    <p className="text-center text-[14px] py-14" style={{ color: "var(--text-faint)" }}>
+      {text}
+    </p>
   );
 }
