@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { Avatar, Icon, LikeButton } from '@/components/ui';
 import { CommentComposerModal } from '@/features/comments/CommentComposerModal';
+import { uploadMedia } from '@/features/media/media.api';
 import { QuoteComposerModal } from '@/features/posts/QuoteComposerModal';
 import { QuotedCard } from '@/features/posts/QuotedCard';
 import type { Post } from '@/types';
@@ -16,7 +17,7 @@ interface PostCardProps {
   onRepost?: (id: string) => void;
   onQuoted?: (created: Post) => void;
   onDelete?: (id: string) => void;
-  onUpdate?: (id: string, newContent: string) => void;
+  onUpdate?: (id: string, newContent: string, mediaUrl?: string | null) => void;
   flat?: boolean;
 }
 
@@ -43,11 +44,36 @@ export function PostCard({
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(display.content);
+  const [editMedia, setEditMedia] = useState<string | null>(display.mediaUrl ?? null);
+  const [mediaUploading, setMediaUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
   const [commentBump, setCommentBump] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
   const repostMenuRef = useRef<HTMLDivElement>(null);
+  const editFileRef = useRef<HTMLInputElement>(null);
+
+  function startEditing() {
+    setEditText(display.content);
+    setEditMedia(display.mediaUrl ?? null);
+    setEditing(true);
+    setMenuOpen(false);
+  }
+
+  async function handleEditFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setMediaUploading(true);
+    try {
+      const { url } = await uploadMedia(file);
+      setEditMedia(url);
+    } catch {
+      // keep the previous image on failure
+    } finally {
+      setMediaUploading(false);
+      if (editFileRef.current) editFileRef.current.value = '';
+    }
+  }
 
   useEffect(() => {
     if (!menuOpen && !repostMenuOpen) return;
@@ -63,14 +89,14 @@ export function PostCard({
 
   async function saveEdit() {
     const trimmed = editText.trim();
-    if (!trimmed || trimmed === display.content) {
-      setEditing(false);
-      setEditText(display.content);
+    const mediaChanged = editMedia !== (display.mediaUrl ?? null);
+    if (!trimmed || (trimmed === display.content && !mediaChanged)) {
+      cancelEdit();
       return;
     }
     setSaving(true);
     try {
-      await onUpdate?.(display.id, trimmed);
+      await onUpdate?.(display.id, trimmed, editMedia);
       setEditing(false);
     } catch {
       // API call failed; stay in edit mode so user can retry
@@ -82,6 +108,7 @@ export function PostCard({
   function cancelEdit() {
     setEditing(false);
     setEditText(display.content);
+    setEditMedia(display.mediaUrl ?? null);
   }
 
   const canEdit = isOwn && !isPlainRepost;
@@ -165,8 +192,7 @@ export function PostCard({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      setEditing(true);
-                      setMenuOpen(false);
+                      startEditing();
                     }}
                     className="flex items-center gap-3 w-full px-4 py-3 text-[14px] font-semibold transition-colors"
                     style={{ color: 'var(--text)' }}
@@ -205,16 +231,66 @@ export function PostCard({
                 className="w-full bg-transparent border-none outline-none resize-none text-[15.5px] leading-relaxed font-sans"
                 style={{ color: 'var(--text)' }}
               />
+
+              {/* Image preview + remove */}
+              {editMedia && (
+                <div className="relative mt-1 rounded-[14px] overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={editMedia}
+                    alt="media"
+                    className="w-full object-cover"
+                    style={{ maxHeight: 240 }}
+                  />
+                  {mediaUploading && (
+                    <div
+                      className="absolute inset-0 flex items-center justify-center"
+                      style={{ background: 'rgba(0,0,0,0.35)' }}
+                    >
+                      <span className="w-6 h-6 rounded-full border-[3px] border-white border-t-transparent animate-spin block" />
+                    </div>
+                  )}
+                  <button
+                    onClick={() => setEditMedia(null)}
+                    className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center"
+                    style={{ background: 'rgba(0,0,0,0.55)' }}
+                    aria-label="Retirer l'image"
+                  >
+                    <Icon name="close" size={14} color="white" />
+                  </button>
+                </div>
+              )}
+
+              <input
+                ref={editFileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleEditFile}
+              />
+
               <div
                 className="flex items-center justify-between pt-2 mt-1 border-t"
                 style={{ borderColor: 'var(--border)' }}
               >
-                <span
-                  className="text-[12px] font-semibold"
-                  style={{ color: 280 - editText.length < 20 ? 'var(--like)' : 'var(--text-faint)' }}
-                >
-                  {280 - editText.length}
-                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => editFileRef.current?.click()}
+                    className="w-8 h-8 flex items-center justify-center rounded-full"
+                    style={{ color: 'var(--primary)' }}
+                    aria-label="Ajouter une image"
+                  >
+                    <Icon name="image" size={18} />
+                  </button>
+                  <span
+                    className="text-[12px] font-semibold"
+                    style={{
+                      color: 280 - editText.length < 20 ? 'var(--like)' : 'var(--text-faint)',
+                    }}
+                  >
+                    {280 - editText.length}
+                  </span>
+                </div>
                 <div className="flex gap-2">
                   <button
                     onClick={cancelEdit}
@@ -225,7 +301,7 @@ export function PostCard({
                   </button>
                   <button
                     onClick={saveEdit}
-                    disabled={!editText.trim() || editText.length > 280 || saving}
+                    disabled={!editText.trim() || editText.length > 280 || saving || mediaUploading}
                     className="h-8 px-4 rounded-full text-[13px] font-bold disabled:opacity-50"
                     style={{ background: 'var(--primary)', color: 'var(--on-primary)' }}
                   >
