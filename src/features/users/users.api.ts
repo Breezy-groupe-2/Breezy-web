@@ -6,6 +6,13 @@ export async function getSuggestions(): Promise<User[]> {
   return data;
 }
 
+export async function searchUsers(query: string): Promise<User[]> {
+  const { data } = await apiClient.get<User[]>("/api/v1/users/search", {
+    params: { q: query },
+  });
+  return data;
+}
+
 export async function followUser(username: string): Promise<void> {
   await apiClient.post(`/api/v1/users/${username}/follow`);
 }
