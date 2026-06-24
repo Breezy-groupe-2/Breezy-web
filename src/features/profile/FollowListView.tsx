@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { Avatar, Icon } from "@/components/ui";
+import { EmptyState, Icon } from "@/components/ui";
+import { UserRow } from "@/features/users/UserRow";
 import { getFollowers, getFollowing } from "@/features/users/users.api";
-import { useFollow } from "@/store/follow-context";
 import { useAuth } from "@/hooks/use-auth";
 import type { User } from "@/types";
 
@@ -15,7 +14,6 @@ export function FollowListView({ initialTab }: { initialTab: Tab }) {
   const { username } = useParams<{ username: string }>();
   const router = useRouter();
   const { user: me } = useAuth();
-  const { isFollowing, toggle } = useFollow();
 
   const resolvedUsername = username === "me" ? me?.username ?? "" : username;
 
@@ -99,51 +97,20 @@ export function FollowListView({ initialTab }: { initialTab: Tab }) {
           <span className="w-7 h-7 rounded-full border-[3px] border-primary border-t-transparent animate-spin block" />
         </div>
       ) : list.length === 0 ? (
-        <p className="text-center text-[14px] py-16" style={{ color: "var(--text-faint)" }}>
-          {tab === "followers" ? "Aucun abonné pour l’instant." : "Aucun abonnement pour l’instant."}
-        </p>
+        <EmptyState
+          title={tab === "followers" ? "Aucun abonné" : "Aucun abonnement"}
+          text={
+            tab === "followers"
+              ? "Personne ne suit ce profil pour l’instant."
+              : "Ce profil ne suit personne pour l’instant."
+          }
+          icon="user"
+        />
       ) : (
         <div className="flex flex-col py-1 pb-[120px] md:pb-8">
-          {list.map((u) => {
-            const isMe = u.username === me?.username;
-            const isFollowed = isFollowing(u.username);
-            return (
-              <div key={u.username} className="flex items-start gap-3 px-5 py-3">
-                <Link href={`/profile/${u.username}`}>
-                  <Avatar displayName={u.displayName} src={u.avatarUrl} size={44} />
-                </Link>
-                <Link href={`/profile/${u.username}`} className="flex-1 min-w-0">
-                  <p className="text-[15px] font-bold truncate" style={{ color: "var(--text)" }}>
-                    {u.displayName}
-                  </p>
-                  <p className="text-[13.5px] truncate" style={{ color: "var(--text-faint)" }}>
-                    @{u.username}
-                  </p>
-                  {u.bio && (
-                    <p
-                      className="text-[14px] leading-snug mt-1 line-clamp-2"
-                      style={{ color: "var(--text-muted)" }}
-                    >
-                      {u.bio}
-                    </p>
-                  )}
-                </Link>
-                {!isMe && (
-                  <button
-                    onClick={() => toggle(u.username)}
-                    className="h-8 px-4 rounded-full text-[13px] font-bold transition-colors shrink-0"
-                    style={
-                      isFollowed
-                        ? { background: "var(--surface-2)", color: "var(--text-muted)" }
-                        : { background: "var(--primary)", color: "var(--on-primary)" }
-                    }
-                  >
-                    {isFollowed ? "Suivi" : "Suivre"}
-                  </button>
-                )}
-              </div>
-            );
-          })}
+          {list.map((u) => (
+            <UserRow key={u.username} user={u} showBio />
+          ))}
         </div>
       )}
     </div>

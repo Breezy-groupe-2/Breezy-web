@@ -13,6 +13,25 @@ export function findPostInTree(posts: Post[], id: string): Post | undefined {
 }
 
 /**
+ * Apply a like toggle to every occurrence of `id` in the list (including the
+ * embedded original of a repost card), returning a new list.
+ */
+export function applyLikeToggle(posts: Post[], id: string, liked: boolean): Post[] {
+  const patch = (p: Post): Post => ({
+    ...p,
+    isLiked: liked,
+    likeCount: Math.max(0, p.likeCount + (liked ? 1 : -1)),
+  });
+  return posts.map((post) => {
+    let next = post.id === id ? patch(post) : post;
+    if (next.repostOf && next.repostOf.id === id) {
+      next = { ...next, repostOf: patch(next.repostOf) };
+    }
+    return next;
+  });
+}
+
+/**
  * Apply a repost toggle to every occurrence of `id` in the list, including the
  * embedded original of a repost card, so counts stay in sync everywhere.
  */
