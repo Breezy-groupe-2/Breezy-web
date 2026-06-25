@@ -300,6 +300,31 @@ export const handlers = [
     return HttpResponse.json(reports);
   }),
 
+  http.post(`${BASE}/api/v1/moderation/reports`, async ({ request }) => {
+    await delay(250);
+    const body = (await request.json()) as {
+      kind: Report["kind"];
+      reason: Report["reason"];
+      author: Report["author"];
+      postId?: string;
+      text?: string;
+      onPostAuthor?: Report["onPostAuthor"];
+    };
+    const report: Report = {
+      id: `rp${Date.now()}`,
+      kind: body.kind,
+      author: body.author,
+      reason: body.reason,
+      count: 1,
+      time: "à l'instant",
+      text: body.text?.trim() || `Profil @${body.author.username} signalé`,
+      postId: body.postId,
+      onPostAuthor: body.onPostAuthor,
+    };
+    reports = [report, ...reports];
+    return HttpResponse.json(report, { status: 201 });
+  }),
+
   http.post(`${BASE}/api/v1/moderation/reports/:id/dismiss`, async ({ params }) => {
     await delay(250);
     reports = reports.filter((r) => r.id !== params.id);

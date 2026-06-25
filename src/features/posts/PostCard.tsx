@@ -8,6 +8,7 @@ import { uploadMedia } from '@/features/media/media.api';
 import { QuoteComposerModal } from '@/features/posts/QuoteComposerModal';
 import { QuotedCard } from '@/features/posts/QuotedCard';
 import { reportContent } from '@/features/moderation/moderation.api';
+import { useAuth } from '@/hooks/use-auth';
 import type { Post } from '@/types';
 import { formatRelative } from '@/lib/time';
 
@@ -32,6 +33,7 @@ export function PostCard({
   onUpdate,
   flat = false,
 }: PostCardProps) {
+  const { user } = useAuth();
   // A plain repost (no quote text) shows the original post with a "reposted by"
   // label; a quote repost is a normal post that embeds the quoted one.
   const isPlainRepost = !!post.repostOf && !post.content;
@@ -112,8 +114,9 @@ export function PostCard({
     setEditMedia(display.mediaUrl ?? null);
   }
 
-  const canEdit = isOwn && !isPlainRepost;
-  const canReport = !isOwn;
+  const isDisplayedOwn = author.username === user?.username || (!user && isOwn && !isPlainRepost);
+  const canEdit = isDisplayedOwn && !isPlainRepost;
+  const canReport = !isDisplayedOwn;
 
   async function handleReport() {
     setMenuOpen(false);

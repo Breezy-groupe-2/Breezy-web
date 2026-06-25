@@ -21,5 +21,6 @@ export function reportUser(user: User, reason: ReportReason = "Contenu inappropr
     kind: "user",
     reason,
     author: { username: user.username, displayName: user.displayName, avatarUrl: user.avatarUrl },
+    text: user.bio?.trim() || `Profil @${user.username} signalé`,
   });
 }
