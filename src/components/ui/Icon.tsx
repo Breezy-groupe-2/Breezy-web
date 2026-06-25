@@ -73,8 +73,7 @@ export function Icon({
       strokeWidth={stroke}
       strokeLinecap="round"
       strokeLinejoin="round"
-      overflow="visible"
-      className={className}
+      className={`overflow-visible ${className ?? ""}`}
       aria-hidden
     >
       {getPath(name, color)}
