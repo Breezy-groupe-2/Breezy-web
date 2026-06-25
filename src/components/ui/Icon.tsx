@@ -73,6 +73,7 @@ export function Icon({
       strokeWidth={stroke}
       strokeLinecap="round"
       strokeLinejoin="round"
+      overflow="visible"
       className={className}
       aria-hidden
     >
