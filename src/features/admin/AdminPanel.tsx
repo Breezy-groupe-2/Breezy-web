@@ -194,6 +194,15 @@ function ReportCard({
           <button onClick={() => act("suspend", `@${report.author.username} suspendu·e`)} style={modBtn("danger")}>
             <Icon name="pause" size={15} /> Suspendre
           </button>
+          {report.postId && (
+            <Link
+              href={`/post/${report.postId}`}
+              className="hidden md:inline-flex items-center gap-1.5"
+              style={{ ...modBtn("ghost"), flex: "none" }}
+            >
+              Voir le post <Icon name="chevron" size={15} />
+            </Link>
+          )}
           <Link
             href={`/profile/${report.author.username}`}
             className="hidden md:inline-flex items-center gap-1.5 ml-auto"
