@@ -88,6 +88,12 @@ function StatusPill({ status }: { status: UserStatus }) {
   );
 }
 
+function reportKindLabel(kind: Report["kind"]) {
+  if (kind === "post") return "Post";
+  if (kind === "user") return "Profil";
+  return "Commentaire";
+}
+
 function StatTile({ icon, value, label, hue }: { icon: "flag" | "user" | "pause" | "ban"; value: number; label: string; hue: number }) {
   return (
     <div
@@ -137,7 +143,7 @@ function ReportCard({
       >
         <ReasonBadge reason={report.reason} />
         <span className="text-[12.5px]" style={{ color: "var(--text-muted)" }}>
-          · {report.kind === "post" ? "Post" : "Commentaire"} signalé
+          · {reportKindLabel(report.kind)} signalé
         </span>
         <span className="ml-auto flex items-center gap-1.5 text-[12.5px]" style={{ color: "var(--text-faint)" }}>
           <span className="flex items-center gap-1 font-bold" style={{ color: "var(--like)" }}>

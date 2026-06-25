@@ -7,6 +7,8 @@ import { CommentComposerModal } from '@/features/comments/CommentComposerModal';
 import { uploadMedia } from '@/features/media/media.api';
 import { QuoteComposerModal } from '@/features/posts/QuoteComposerModal';
 import { QuotedCard } from '@/features/posts/QuotedCard';
+import { reportContent } from '@/features/moderation/moderation.api';
+import { useAuth } from '@/hooks/use-auth';
 import type { Post } from '@/types';
 import { formatRelative } from '@/lib/time';
 
@@ -31,6 +33,7 @@ export function PostCard({
   onUpdate,
   flat = false,
 }: PostCardProps) {
+  const { user } = useAuth();
   // A plain repost (no quote text) shows the original post with a "reposted by"
   // label; a quote repost is a normal post that embeds the quoted one.
   const isPlainRepost = !!post.repostOf && !post.content;
@@ -111,7 +114,29 @@ export function PostCard({
     setEditMedia(display.mediaUrl ?? null);
   }
 
-  const canEdit = isOwn && !isPlainRepost;
+  const isDisplayedOwn = author.username === user?.username || (!user && isOwn && !isPlainRepost);
+  const canEdit = isDisplayedOwn && !isPlainRepost;
+  const canReport = !isDisplayedOwn;
+
+  async function handleReport() {
+    setMenuOpen(false);
+    try {
+      await reportContent({
+        kind: 'post',
+        reason: 'Contenu inapproprié',
+        postId: display.id,
+        text: display.content,
+        author: {
+          username: author.username,
+          displayName: author.displayName,
+          avatarUrl: author.avatarUrl,
+        },
+      });
+      window.alert('Merci, ce post a été signalé à la modération.');
+    } catch {
+      window.alert('Le signalement a échoué, réessaie.');
+    }
+  }
 
   return (
     <article
@@ -172,7 +197,7 @@ export function PostCard({
                 onClick={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
-                  if (canEdit) setMenuOpen((o) => !o);
+                  if (canEdit || canReport) setMenuOpen((o) => !o);
                 }}
                 className="flex p-1 -m-1 rounded-full"
                 aria-label="Options"
@@ -180,7 +205,7 @@ export function PostCard({
                 <Icon name="more" size={18} color="var(--text-faint)" />
               </button>
 
-              {canEdit && menuOpen && (
+              {(canEdit || canReport) && menuOpen && (
                 <div
                   className="absolute right-0 top-6 w-[170px] rounded-[14px] border overflow-hidden z-20"
                   style={{
@@ -189,31 +214,50 @@ export function PostCard({
                     boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
                   }}
                 >
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      startEditing();
-                    }}
-                    className="flex items-center gap-3 w-full px-4 py-3 text-[14px] font-semibold transition-colors"
-                    style={{ color: 'var(--text)' }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-2)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <Icon name="edit" size={15} color="var(--text)" />
-                    Modifier
-                  </button>
-                  <div className="border-t" style={{ borderColor: 'var(--border)' }} />
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setMenuOpen(false);
-                      onDelete?.(display.id);
-                    }}
-                    className="flex items-center gap-3 w-full px-4 py-3 text-[14px] font-semibold text-red-500 transition-colors hover:bg-red-50"
-                  >
-                    <Icon name="trash" size={15} color="currentColor" />
-                    Supprimer
-                  </button>
+                  {canEdit && (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          startEditing();
+                        }}
+                        className="flex items-center gap-3 w-full px-4 py-3 text-[14px] font-semibold transition-colors"
+                        style={{ color: 'var(--text)' }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-2)')}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                      >
+                        <Icon name="edit" size={15} color="var(--text)" />
+                        Modifier
+                      </button>
+                      <div className="border-t" style={{ borderColor: 'var(--border)' }} />
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMenuOpen(false);
+                          onDelete?.(display.id);
+                        }}
+                        className="flex items-center gap-3 w-full px-4 py-3 text-[14px] font-semibold text-red-500 transition-colors hover:bg-red-50"
+                      >
+                        <Icon name="trash" size={15} color="currentColor" />
+                        Supprimer
+                      </button>
+                    </>
+                  )}
+                  {canReport && !canEdit && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleReport();
+                      }}
+                      className="flex items-center gap-3 w-full px-4 py-3 text-[14px] font-semibold transition-colors"
+                      style={{ color: 'var(--like)' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-2)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <Icon name="flag" size={15} color="var(--like)" />
+                      Signaler
+                    </button>
+                  )}
                 </div>
               )}
             </span>

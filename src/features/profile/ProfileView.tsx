@@ -22,6 +22,7 @@ import { uploadMedia } from "@/features/media/media.api";
 import { useAuth } from "@/hooks/use-auth";
 import { useFollow } from "@/store/follow-context";
 import { useCompose } from "@/store/compose-context";
+import { reportUser } from "@/features/moderation/moderation.api";
 import type { User, Post } from "@/types";
 
 type Tab = "posts" | "media" | "likes";
@@ -216,10 +217,16 @@ export function ProfileView() {
     setTimeout(() => setShareToast(false), 2000);
   }
 
-  function handleReport() {
+  async function handleReport() {
     setMenuOpen(false);
     setShareToast(false);
-    window.alert("Signalement transmis à la modération. Merci.");
+    if (!profile) return;
+    try {
+      await reportUser(profile);
+      window.alert("Signalement transmis à la modération. Merci.");
+    } catch {
+      window.alert("Le signalement a échoué, réessaie.");
+    }
   }
 
   async function handleAvatarFile(e: React.ChangeEvent<HTMLInputElement>) {

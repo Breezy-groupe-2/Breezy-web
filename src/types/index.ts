@@ -82,7 +82,7 @@ export type ReportReason = "Spam" | "Harcèlement" | "Contenu inapproprié" | "D
 
 export interface Report {
   id: string;
-  kind: "post" | "comment";
+  kind: "post" | "comment" | "user";
   author: { username: string; displayName: string; avatarUrl?: string };
   reason: ReportReason;
   count: number;
