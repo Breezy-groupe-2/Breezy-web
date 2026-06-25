@@ -27,10 +27,15 @@ src/
     (auth)/
       login/
       register/
+      register/username/   # Step 2 of conversational registration
     (main)/
       home/
       profile/[username]/
       post/[id]/
+      admin/
+      activity/            # Notifications placeholder
+      search/
+    suspended/             # Suspended/banned user page
     layout.tsx
     page.tsx
   features/
@@ -40,12 +45,15 @@ src/
     comments/    # comment thread, reply form
     profile/     # profile header, follow button
     users/       # user search, user card
+    admin/       # admin moderation panel
+    moderation/  # report API
+    media/       # media upload
   components/
-    ui/          # reusable primitives: Button, Input, Avatar, Spinner
-    layout/      # Sidebar, BottomNav, Header
-  hooks/         # shared custom hooks (useAuth, useInfiniteScroll…)
+    ui/          # reusable primitives: Avatar, BreezyLogo, Button, EmptyState, Icon, Input, LikeButton, Spinner
+    layout/      # Sidebar, Dock, RightRail, AuthGuard
+  hooks/         # useAuth
   lib/           # axios instance, token helpers
-  store/         # auth state (Context or Zustand)
+  store/         # auth context, theme context, compose context, follow context
   types/         # shared TypeScript interfaces (User, Post, Comment…)
 ```
 
@@ -62,23 +70,22 @@ src/
 
 ## Auth and Sessions
 
-- Store the JWT in `localStorage` under the key `breezy_token` unless the team decides to use httpOnly cookies.
+- Store the JWT in `localStorage` under the key `breezy_token`.
 - Expose `useAuth()` hook from `store/` to read and mutate auth state everywhere.
-- Protected routes redirect to `/login` when `useAuth().user` is null.
+- Protected routes redirect to `/login` when the JWT token is absent.
 - After successful login or register, redirect to `/home`.
 
 ## TypeScript
 
 - Use strict TypeScript. Avoid `any`; use `unknown` with narrowing when the type is genuinely uncertain.
 - Define shared shapes in `types/`: `User`, `Post`, `Comment`, `Like`, `Follow`, `Notification`.
-- Use `z.infer<typeof schema>` from Zod when validating API responses client-side if validation is needed.
 
 ## Styling
 
 - Use Tailwind CSS v4 utility classes exclusively. No CSS modules, no styled-components.
 - Design mobile-first: base classes for mobile, `md:` / `lg:` for wider breakpoints.
 - The main layout is two-column on desktop (sidebar + content) and tab-bar on mobile.
-- Keep colour tokens in Tailwind config, not inline hex values.
+- Keep colour tokens as CSS custom properties in `globals.css` and reference them via the `@theme` Tailwind v4 block or inline styles, not inline hex values.
 
 ## Git Workflow
 
@@ -101,10 +108,12 @@ src/
 ## Environment Variables
 
 - `NEXT_PUBLIC_API_URL` — base URL of the Breezy API (e.g. `http://localhost:4000`).
+- `NEXT_PUBLIC_USE_MSW` — enable MSW mocking in development (set to `true`).
+- `NEXT_PUBLIC_GOOGLE_CLIENT_ID` — Google OAuth client ID (for Google sign-in).
 - Copy `.env.example` to `.env.local` for local development. Never commit `.env.local`.
 
 ## Documentation
 
 - Write code, comments, and documentation in English.
 - Keep the README updated with setup steps and environment variables.
-- Keep architectural decisions that affect auth flow, routing strategy, or API contract documented inline or in `docs/`.
+- Keep architectural decisions that affect auth flow, routing strategy, or API contract documented inline.
