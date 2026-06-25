@@ -367,7 +367,7 @@ export function PostCard({
                 >
                   <Icon
                     name="repost"
-                    size={20}
+                    size={22}
                     stroke={1.9}
                     color={display.isReposted ? 'var(--repost, #00ba7c)' : 'currentColor'}
                   />
