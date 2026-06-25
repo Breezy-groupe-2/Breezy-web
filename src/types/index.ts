@@ -88,6 +88,7 @@ export interface Report {
   count: number;
   time: string;
   text: string;
+  postId?: string;
   onPostAuthor?: { username: string; displayName: string };
 }
 
