@@ -4,7 +4,7 @@ Front-end React/Next.js for the Breezy social network — a Twitter/X-inspired p
 
 ## Tech stack
 
-- **Next.js 15** (App Router) · **React 19** · **TypeScript**
+- **Next.js 16** (App Router) · **React 19** · **TypeScript**
 - **Tailwind CSS v4** with oklch design tokens
 - **Axios** for all HTTP calls
 - **MSW** (Mock Service Worker) for local API mocking
@@ -38,6 +38,8 @@ Open [http://localhost:3000](http://localhost:3000).
 | Variable | Description | Example |
 |---|---|---|
 | `NEXT_PUBLIC_API_URL` | Base URL of the Breezy API | `http://localhost:4000` |
+| `NEXT_PUBLIC_USE_MSW` | Enable MSW mocking in development | `true` |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Google OAuth client ID (for Google sign-in) | `your-client-id` |
 
 Copy `.env.example` to `.env.local` for local development. Never commit `.env.local`.
 
@@ -47,9 +49,11 @@ Copy `.env.example` to `.env.local` for local development. Never commit `.env.lo
 |---|---|
 | `npm run dev` | Start development server on port 3000 |
 | `npm run build` | Production build |
+| `npm run start` | Start production server |
 | `npm run lint` | Run ESLint |
 | `npm run format` | Auto-format with Prettier |
 | `npm run format:check` | Check formatting (CI) |
+| `npm run commit` | Interactive commit via Commitizen |
 
 ## Features
 
@@ -75,7 +79,8 @@ Copy `.env.example` to `.env.local` for local development. Never commit `.env.lo
 src/
   app/
     (auth)/          # Public pages: login, register
-    (main)/          # Protected pages: home, profile, post, admin, settings
+    (main)/          # Protected pages: home, profile, post, admin, activity, search
+    suspended/       # Suspended/banned user page
   features/
     auth/            # Login/register forms, auth API
     feed/            # Feed queries, compose sheet
@@ -83,12 +88,15 @@ src/
     comments/        # Comment thread, reply form
     profile/         # Profile API
     users/           # Follow API, user search
+    admin/           # Admin moderation panel
+    moderation/      # Report API
+    media/           # Media upload
   components/
-    ui/              # Button, Input, Avatar, Icon, Spinner…
-    layout/          # Sidebar, BottomNav, TopBar, AuthGuard
-  hooks/             # useAuth, shared hooks
+    ui/              # Avatar, BreezyLogo, Button, EmptyState, Icon, Input, LikeButton, Spinner
+    layout/          # Sidebar, Dock, RightRail, AuthGuard
+  hooks/             # useAuth
   lib/               # Axios instance, token helpers
-  store/             # Auth context, theme context, compose context
+  store/             # Auth context, theme context, compose context, follow context
   types/             # Shared TypeScript interfaces
   mocks/             # MSW handlers and mock data
 ```
