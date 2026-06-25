@@ -19,18 +19,22 @@ interface AuthContextValue extends AuthState {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState>(() => {
-    const token = getToken();
-    return {
-      user: null,
-      token,
-      isLoading: Boolean(token),
-    };
+  // Start in a loading state that is identical on the server and the first
+  // client render (localStorage is unavailable during SSR, so reading the token
+  // in the initializer would cause a hydration mismatch). The token is resolved
+  // in the effect below, which only runs on the client.
+  const [state, setState] = useState<AuthState>({
+    user: null,
+    token: null,
+    isLoading: true,
   });
 
   useEffect(() => {
     const token = getToken();
     if (!token) {
+      // Resolve on a microtask so we don't call setState synchronously inside the
+      // effect body (the token comes from localStorage, available only on the client).
+      queueMicrotask(() => setState({ user: null, token: null, isLoading: false }));
       return;
     }
 
@@ -40,6 +44,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         removeToken();
         setState({ user: null, token: null, isLoading: false });
       });
+  }, []);
+
+  useEffect(() => {
+    function onStorage(e: StorageEvent) {
+      if (e.key !== "breezy_token") return;
+      if (!e.newValue) {
+        setState({ user: null, token: null, isLoading: false });
+      }
+    }
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
   const login = useCallback((token: string, user: User) => {

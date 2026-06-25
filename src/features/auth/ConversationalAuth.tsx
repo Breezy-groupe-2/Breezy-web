@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { Icon, Avatar } from "@/components/ui";
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/store/theme-context";
-import { loginUser, registerUser } from "./auth.api";
+import { loginUser, registerUser, loginWithGoogle } from "./auth.api";
+import { GoogleButton, isGoogleConfigured } from "./GoogleButton";
 import { isAxiosError } from "@/lib/axios";
 
 const FLOAT_CARDS = [
@@ -57,6 +58,7 @@ export function ConversationalAuth({ initialMode = "login" }: ConversationalAuth
   const [showPwd, setShowPwd] = useState(false);
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const steps: StepKey[] = mode === "login" ? ["email", "pwd"] : ["email", "pwd", "username"];
@@ -68,7 +70,7 @@ export function ConversationalAuth({ initialMode = "login" }: ConversationalAuth
     setErr("");
     if (key === "email") setEmail(v);
     else if (key === "pwd") setPwd(v);
-    else setUsername(v.replace(/[^a-zA-Z0-9]/g, ""));
+    else setUsername(v.replace(/[^a-zA-Z0-9_]/g, ""));
   };
 
   useEffect(() => {
@@ -82,9 +84,9 @@ export function ConversationalAuth({ initialMode = "login" }: ConversationalAuth
         : "Hmm, cet email ne ressemble pas à un email.";
     if (key === "pwd")
       return pwd.length >= 8 ? "" : "Il faut au moins 8 caractères.";
-    return /^[a-zA-Z0-9]{3,20}$/.test(username)
+    return /^[a-zA-Z0-9_]{3,50}$/.test(username)
       ? ""
-      : "3 à 20 caractères, lettres et chiffres.";
+      : "3 à 50 caractères : lettres, chiffres ou _.";
   }
 
   async function next() {
@@ -107,7 +109,7 @@ export function ConversationalAuth({ initialMode = "login" }: ConversationalAuth
       router.push("/home");
     } catch (err) {
       if (isAxiosError(err) && err.response) {
-        setErr(err.response.data?.message ?? "Identifiants incorrects.");
+        setErr(err.response.data?.error ?? "Identifiants incorrects.");
       } else {
         setErr("Une erreur est survenue. Réessaie plus tard.");
       }
@@ -119,6 +121,21 @@ export function ConversationalAuth({ initialMode = "login" }: ConversationalAuth
   function back() {
     if (step > 0) { setErr(""); setStep((s) => s - 1); }
   }
+
+  const onGoogleCredential = async (credential: string) => {
+    setGoogleLoading(true);
+    setErr("");
+    try {
+      const res = await loginWithGoogle(credential);
+      login(res.token, res.user);
+      router.push("/home");
+    } catch {
+      setErr("Impossible de se connecter avec Google. Réessaie.");
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
 
   function switchMode(m: Mode) {
     setMode(m);
@@ -357,6 +374,26 @@ export function ConversationalAuth({ initialMode = "login" }: ConversationalAuth
           <p className="mt-3 text-[13px] font-semibold" style={{ color: "var(--like)" }}>
             {err}
           </p>
+        )}
+
+        {/* Google OAuth — only on first step */}
+        {step === 0 && isGoogleConfigured && (
+          <div className="w-full max-w-[360px] mt-5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
+              <span className="text-[12.5px] font-semibold" style={{ color: "var(--text-faint)" }}>ou</span>
+              <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
+            </div>
+            <GoogleButton
+              onCredential={onGoogleCredential}
+              text={mode === "login" ? "signin_with" : "signup_with"}
+            />
+            {googleLoading && (
+              <p className="mt-2 text-center text-[13px]" style={{ color: "var(--text-faint)" }}>
+                Connexion en cours…
+              </p>
+            )}
+          </div>
         )}
       </div>
 

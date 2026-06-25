@@ -23,11 +23,12 @@ export function RegisterStep2Form() {
     if (!step1) {
       router.replace("/register");
     }
+    return () => clearRegisterStep1();
   }, [router]);
 
   function validateUsername(value: string) {
     if (!value) return "Le nom d'utilisateur est requis.";
-    if (!/^[a-zA-Z0-9_]{3,20}$/.test(value)) return "3 à 20 caractères : lettres, chiffres ou _.";
+    if (!/^[a-zA-Z0-9_]{3,50}$/.test(value)) return "3 à 50 caractères : lettres, chiffres ou _.";
     return null;
   }
 
@@ -57,7 +58,7 @@ export function RegisterStep2Form() {
       router.push("/home");
     } catch (err) {
       if (isAxiosError(err) && err.response) {
-        const msg = err.response.data?.message ?? "Une erreur est survenue.";
+        const msg = err.response.data?.error ?? "Une erreur est survenue.";
         setError(msg);
       } else {
         setError("Une erreur est survenue. Réessaie plus tard.");
@@ -86,7 +87,7 @@ export function RegisterStep2Form() {
           height="16"
           viewBox="0 0 24 24"
           fill="none"
-          stroke="#6B6B6B"
+          stroke="var(--text-muted)"
           strokeWidth="2.5"
           strokeLinecap="round"
         >
@@ -140,7 +141,7 @@ export function RegisterStep2Form() {
               height="14"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="#0A0A0A"
+              stroke="var(--text)"
               strokeWidth="2.5"
               strokeLinecap="round"
             >

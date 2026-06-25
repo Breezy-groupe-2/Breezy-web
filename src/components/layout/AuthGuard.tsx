@@ -6,14 +6,20 @@ import { useAuth } from '@/hooks/use-auth';
 import { Spinner } from '@/components/ui';
 
 export function AuthGuard({ children }: { children: ReactNode }) {
-  const { token, isLoading } = useAuth();
+  const { token, user, isLoading } = useAuth();
   const router = useRouter();
+  const restricted = user?.status === 'suspended' || user?.status === 'banned';
 
   useEffect(() => {
-    if (!isLoading && !token) {
+    if (isLoading) return;
+    if (!token) {
       router.replace('/login');
+      return;
     }
-  }, [isLoading, token, router]);
+    if (restricted) {
+      router.replace('/suspended');
+    }
+  }, [isLoading, token, restricted, router]);
 
   if (isLoading) {
     return (
@@ -26,7 +32,7 @@ export function AuthGuard({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!token) return null;
+  if (!token || restricted) return null;
 
   return <>{children}</>;
 }

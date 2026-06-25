@@ -22,7 +22,12 @@ export async function registerUser(payload: RegisterPayload): Promise<AuthRespon
   return data;
 }
 
+export async function loginWithGoogle(credential: string): Promise<AuthResponse> {
+  const { data } = await apiClient.post<AuthResponse>("/api/v1/auth/google", { credential });
+  return data;
+}
+
 export async function getMe(): Promise<User> {
-  const { data } = await apiClient.get<User>("/api/v1/users/me");
+  const { data } = await apiClient.get<User>("/api/v1/auth/me");
   return data;
 }

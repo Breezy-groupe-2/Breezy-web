@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { Avatar, Icon } from "@/components/ui";
 import { useCompose } from "@/store/compose-context";
 import { useAuth } from "@/hooks/use-auth";
+import { uploadMedia } from "@/features/media/media.api";
 
 const MAX = 280;
 const CIRCUMFERENCE = 2 * Math.PI * 11;
@@ -13,17 +14,43 @@ export function ComposeSheet() {
   const { user } = useAuth();
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  const [mediaUrl, setMediaUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    if (isOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setText("");
-      setTimeout(() => textareaRef.current?.focus(), 80);
-    }
-  }, [isOpen]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
+
+  function clearMedia() {
+    if (mediaPreview) URL.revokeObjectURL(mediaPreview);
+    setMediaPreview(null);
+    setMediaUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function handleClose() {
+    setText("");
+    clearMedia();
+    closeCompose();
+  }
+
+  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const preview = URL.createObjectURL(file);
+    setMediaPreview(preview);
+    setMediaUrl(null);
+    setUploading(true);
+    try {
+      const { url } = await uploadMedia(file);
+      setMediaUrl(url);
+    } catch {
+      clearMedia();
+    } finally {
+      setUploading(false);
+    }
+  }
 
   const remaining = MAX - text.length;
   const over = remaining < 0;
@@ -36,11 +63,12 @@ export function ComposeSheet() {
     : "var(--primary)";
 
   async function handlePost() {
-    if (!text.trim() || over || loading) return;
+    if (!text.trim() || over || loading || uploading) return;
     setLoading(true);
     try {
-      await submit(text.trim());
+      await submit(text.trim(), mediaUrl ?? undefined);
       setText("");
+      clearMedia();
     } finally {
       setLoading(false);
     }
@@ -52,7 +80,7 @@ export function ComposeSheet() {
       <div
         className="absolute inset-0"
         style={{ background: "rgba(20,16,40,0.45)" }}
-        onClick={closeCompose}
+        onClick={handleClose}
       />
 
       {/* Sheet */}
@@ -72,7 +100,7 @@ export function ComposeSheet() {
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-2.5">
           <button
-            onClick={closeCompose}
+            onClick={handleClose}
             className="text-[15.5px] font-bold"
             style={{ color: "var(--text-muted)" }}
           >
@@ -90,22 +118,69 @@ export function ComposeSheet() {
         {/* Compose area */}
         <div className="flex gap-3 px-5 pt-3 pb-1 flex-1 overflow-auto">
           {user && <Avatar displayName={user.displayName} src={user.avatarUrl} size={44} />}
-          <textarea
-            ref={textareaRef}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Quoi de neuf dans ta brise ?"
-            className="flex-1 bg-transparent border-none outline-none resize-none text-[18px] leading-relaxed font-sans"
-            style={{ color: "var(--text)", minHeight: 140 }}
-          />
+          <div className="flex-1">
+            <textarea
+              ref={textareaRef}
+              autoFocus
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Quoi de neuf dans ta brise ?"
+              className="w-full bg-transparent border-none outline-none resize-none text-[18px] leading-relaxed font-sans"
+              style={{ color: "var(--text)", minHeight: 140 }}
+            />
+            {/* Media preview */}
+            {mediaPreview && (
+              <div className="relative mt-2 rounded-[16px] overflow-hidden">
+                <img
+                  src={mediaPreview}
+                  alt="aperçu"
+                  className="w-full object-cover"
+                  style={{ maxHeight: 240 }}
+                />
+                {uploading && (
+                  <div
+                    className="absolute inset-0 flex items-center justify-center"
+                    style={{ background: "rgba(0,0,0,0.35)" }}
+                  >
+                    <span className="w-8 h-8 rounded-full border-[3px] border-white border-t-transparent animate-spin block" />
+                  </div>
+                )}
+                {!uploading && (
+                  <button
+                    onClick={clearMedia}
+                    className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center"
+                    style={{ background: "rgba(0,0,0,0.5)" }}
+                  >
+                    <Icon name="close" size={14} color="white" />
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileSelect}
+        />
 
         {/* Footer */}
         <div
           className="flex items-center gap-1 px-4 py-3"
           style={{ borderTop: "1px solid var(--border)" }}
         >
-          {(["image", "gust", "bookmark"] as const).map((n) => (
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="w-10 h-10 flex items-center justify-center rounded-full"
+            style={{ color: "var(--primary)" }}
+          >
+            <Icon name="image" size={21} />
+          </button>
+          {(["gust", "bookmark"] as const).map((n) => (
             <button
               key={n}
               className="w-10 h-10 flex items-center justify-center rounded-full"
@@ -145,7 +220,7 @@ export function ComposeSheet() {
 
             <button
               onClick={handlePost}
-              disabled={!text.trim() || over || loading}
+              disabled={!text.trim() || over || loading || uploading}
               className="h-[42px] px-5 rounded-full text-[14.5px] font-bold transition-opacity disabled:opacity-50"
               style={{ background: "var(--primary)", color: "var(--on-primary)" }}
             >

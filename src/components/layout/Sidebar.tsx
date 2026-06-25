@@ -15,9 +15,9 @@ const NAV_ITEMS: {
   icon: IconName;
   iconFill?: IconName;
 }[] = [
-  { href: "/home",       label: "Accueil",    icon: "home",   iconFill: "homeFill" },
+  { href: "/home",       label: "Accueil",    icon: "home",     iconFill: "homeFill" },
   { href: "/search",     label: "Découvrir",  icon: "search" },
-  { href: "/activity",   label: "Activité",   icon: "bell",   iconFill: "bellFill" },
+  { href: "/activity",   label: "Activité",   icon: "bell",     iconFill: "bellFill" },
   { href: "/profile/me", label: "Profil",     icon: "user" },
 ];
 
@@ -75,6 +75,20 @@ export function Sidebar() {
             </Link>
           );
         })}
+        {user?.isAdmin && (
+          <Link
+            href="/admin"
+            className="flex items-center gap-3 px-3 py-3 rounded-[14px] text-[16px] transition-colors"
+            style={{
+              color: pathname.startsWith("/admin") ? "var(--primary)" : "var(--text)",
+              background: pathname.startsWith("/admin") ? "var(--primary-soft)" : "transparent",
+              fontWeight: pathname.startsWith("/admin") ? 700 : 500,
+            }}
+          >
+            <Icon name="shield" size={22} color={pathname.startsWith("/admin") ? "var(--primary)" : "var(--text)"} />
+            Modération
+          </Link>
+        )}
       </nav>
 
       <button
